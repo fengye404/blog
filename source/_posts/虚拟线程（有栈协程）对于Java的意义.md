@@ -7,11 +7,11 @@ tags:
 
 # 虚拟线程（有栈协程）对于Java的意义
 
-## 1.传统 Servlet 生态的线程模型
+## 1.传统同步线程模型
 
 在传统的 servlet 生态中，线程模型一般是 thread per request，即每个请求分配一个线程，这个线程负责整个请求的生命周期。
 
-有个很直观的工具：ThreadLocal--在一次请求过程中，可以在请求上游往 ThreadLocal set 一些数据，比如可以存 userId、trace 等；在请求下游时直接调用 threadLocal.get() 即可获取。
+有个很直观的理解：ThreadLocal--在一次请求过程中，可以在请求上游往 ThreadLocal set 一些数据，比如可以存 userId、trace 等；在请求下游时直接调用 threadLocal.get() 即可获取。
 
 ![image-20221203053005893](./202212030530938.png)
 
@@ -23,7 +23,7 @@ tags:
   - 每个内核线程需要由操作系统分配线程控制块，
   - 过多的内核线程会导致频繁的线程上下文切换，如果存在阻塞的 IO 操作，就会导致大量内核线程被阻塞
 
-## 2.响应式线程模型
+## 2.异步&响应式线程模型
 
 为了避免创建和阻塞过多的内核线程，我们需要一种方式提高线程利用率：当遇到某些阻塞IO操作，将线程迁移走以执行其他任务。
 
@@ -91,17 +91,129 @@ public class MainVerticle extends AbstractVerticle {
 
 ## 3.内核线程和用户线程
 
-我们都知道操作系统中有三线程模式：
+操作系统中的线程模式大致可以分为三种：
 
 - 内核线程模式：程序的线程和操作系统提供的内核线程是 1:1 的关系
 - 用户线程模式：程序的线程和操作系统提供的内核线程是 n:1 的关系
 - 混合线程模式：程序的线程和操作系统提供的内核线程是 n:m 的关系
 
-实际上在 java 中，用户线程模型出现早于内核线程。Linux 2.6 之前，操作系统只能提供单线程能力，java 使用了是一种名为“绿色”线程的用户线程模型：将主线程运行在 JVM 中，程序中创建用户线程执行多个任务，本质上是单核并发。
+实际上在 java 中，用户线程模型出现早于内核线程。Linux 2.6 之前，操作系统只能提供单线程能力，java 使用的是一种名为“绿色”线程的用户线程模型：将主线程运行在 JVM 中，程序中创建用户线程执行多个任务，本质上是单核并发。
 
 后来随着多核技术的兴起，Linux 也提供了多线程的能力，这时“绿色”线程的劣势就暴露出来了，它本质上还是只能使用操作系统的单核进行并发，无法充分利用多核进行并行操作，并且所有的线程阻塞、调度逻辑都需要由 java 实现，而不能使用操作系统的能力。
 
 此时 java 就抛弃了这种古早的线程模型，转为了内核线程模式。
+
+然而内核线程模式也有缺点，创建、销毁涉及操作系统资源的分配和管理，上下文切换涉及系统调用、用户态与内核态的切换，而且一个系统中同时存在的线程数量也有上限。
+
+随着并发量的提高，java 中重新提供用户线程模型的诉求日益增加，于是就有了 jdk21 带来的虚拟线程。
+
+## 4.无栈协程和有栈协程
+
+从概念上来看，虚拟线程属于用户线程模型，并且可以被视为协程的一种实现。
+
+协程是一个轻量化、用户态的执行单元，它可以模拟线程的执行上下文。与传统的线程相比，协程在等待 I/O 等操作时能够被挂起，让载体线程去执行其他协程任务，从而提高资源利用率。
+
+在响应式编程模型中，我们通过异步事件的方式不断切换执行的方法，目的也是在保持线程的活跃性而非阻塞。虽然响应式编程允许在回调函数的作用域中附带上下文信息，但这种方式在复杂场景中可能导致“回调地狱”，使得代码的可读性和可维护性下降。
+
+相对而言，协程无论是有栈协程还是无栈协程，都能够附带清晰的上下文信息，允许在更大的作用域内管理状态和控制流。这种结构化的上下文管理使得协程在编写异步代码时更加直观和易于维护。
+
+### 以 kotlin-coroutine 为例的无栈协程
+
+看这段 kotlin 代码：
+
+```kotlin
+package org.example
+
+import kotlinx.coroutines.*
+
+suspend fun fetchData(token : String): String {
+    println("当前fetchData执行线程为:${Thread.currentThread()}")
+    delay(1000) // 模拟阻塞
+    return "$token:success"
+}
+
+suspend fun requestToken(): String {
+    println("当前requestToken执行线程为:${Thread.currentThread()}")
+    delay(1000) // 模拟阻塞
+    return "token"
+}
+
+fun main() = runBlocking {
+    launch {
+        var token = requestToken();
+        var fetchData = fetchData(token)
+        println(fetchData)
+    }
+    println("当前main执行线程为:${Thread.currentThread()}")
+    delay(5000) // 模拟主线程其他逻辑
+}
+
+// 调用结果为
+// 当前main执行线程为:Thread[main,5,main]
+// 当前requestToken执行线程为:Thread[main,5,main]
+// 当前fetchData执行线程为:Thread[main,5,main]
+/token:success
+```
+
+这段代码中，用 `suspend` 关键字定义了两个可被挂起的方法 `fetchData`，在这个方法中通过 `delay` 模拟了耗时的阻塞操作。在主线程中，调用 `fetchData` 后，`fetchData` 中执行到阻塞逻辑时，该方法就会被挂起，并让出线程控制权，以便其他协程或任务可以在同一线程上并发执行；当阻塞结束后，将恢复 `fetchData` 方法，并且继续向下执行。
+
+上述代码看起来和平时的同步阻塞代码几乎一致，甚至在 idea 中可以像同步代码一样 step by step 地 debug。
+
+但是，看似美好的背后，其实是 kotlin 提供的类库能力和 CPS 变换的语法糖。
+
+这段代码实际等价于：
+
+```kotlin
+package org.example
+
+import kotlinx.coroutines.*
+
+fun fetchData(token: String, callback: (String) -> Unit) {
+    println("当前fetchData执行线程为:${Thread.currentThread()}")
+    GlobalScope.launch {
+        delay(1000) // 模拟阻塞
+        callback("$token:success")
+    }
+}
+
+fun requestToken(callback: (String) -> Unit) {
+    println("当前requestToken执行线程为:${Thread.currentThread()}")
+    GlobalScope.launch {
+        delay(1000) // 模拟阻塞
+        callback("token")
+    }
+}
+
+fun main() = runBlocking {
+    requestToken { token ->
+        fetchData(token) { fetchDataResult ->
+            println(fetchDataResult)
+        }
+    }
+    println("当前main执行线程为:${Thread.currentThread()}")
+    delay(5000) // 模拟主线程其他逻辑
+}
+```
+
+可以看到，kotlin 中 `suspend` 
+
+
+
+
+
+
+
+我们都知道 kotlin 早在 jdk21 之前就提供了协程的实现。提到协程，大多数人第一反应可能会想到 go 提供的 goroutine，这是一种在 go runtime 底层提供的能力，但是在 jdk21 之前，显然 jvm 底层没有提供这种能力，所以 kotlin 的 coroutine 实际上是一种 CPS 变换的语法糖。
+
+
+
+在 jdk21 到来之前，我们有除了异步响应式编程以外的解决方案吗？我们可能会想到 
+
+不妨来看看 kotlin，同样作为基于 jvm 的语言，可以说是 java 异父异母的亲兄弟。
+
+在 jdk21 之前，kotlin 就已经提供了协程的实现。但是与 go 提供的 goroutine 不同，goroutine 在运行时底层提供了
+
+### 有栈协程
 
 JDK21 为 java 引入了虚拟线程。虚拟线程实际上是用户线程的一种体现
 
