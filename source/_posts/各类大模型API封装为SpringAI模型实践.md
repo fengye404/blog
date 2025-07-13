@@ -82,3 +82,13 @@ tags:
 
 将 call 和 stream 拆分为
 
+
+
+
+
+### 流式输出
+
+在流式输出模式下，大模型返回的 function call response 也会被拆分为多次返回，需要 merge 一下
+
+- GenerationResult(requestId=02d4a57a-17e5-934c-aa3e-f6cfa84d562e, usage=GenerationUsage(inputTokens=198, outputTokens=16, totalTokens=214), output=GenerationOutput(text=null, finishReason=null, choices=[GenerationOutput.Choice(finishReason=null, index=null, message=Message(role=assistant, content=, toolCalls=[ToolCallFunction(id=call_2de1bcef5d8c499cbebc30, type=function, function=ToolCallFunction.CallFunction(name=获取当前天气, arguments={"location": ", output=null))], toolCallId=null, name=null, contents=null, reasoningContent=null))], searchInfo=null))
+- GenerationResult(requestId=02d4a57a-17e5-934c-aa3e-f6cfa84d562e, usage=GenerationUsage(inputTokens=198, outputTokens=18, totalTokens=216), output=GenerationOutput(text=null, finishReason=null, choices=[GenerationOutput.Choice(finishReason=tool_calls, index=null, message=Message(role=assistant, content=, toolCalls=[ToolCallFunction(id=, type=function, function=ToolCallFunction.CallFunction(name=null, arguments=杭州"}, output=null))], toolCallId=null, name=null, contents=null, reasoningContent=null))], searchInfo=null))
