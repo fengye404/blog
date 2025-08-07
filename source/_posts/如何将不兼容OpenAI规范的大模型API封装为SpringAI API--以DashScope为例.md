@@ -1,11 +1,11 @@
 ---
-title: 自定义实现 Spring AI 的 ChatModel 接口：轻松封装百炼 DashScope API
+title: 如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例
 typora-root-url: ./自定义实现 Spring AI 的 ChatModel 接口：轻松封装百炼 DashScope API
 date: 2025-06-02 18:03:33
 tags:
 ---
 
-# 自定义实现 Spring AI 的 ChatModel 接口：轻松封装百炼 DashScope API
+# 如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例
 
 > 引言:
 >
