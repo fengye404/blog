@@ -43,7 +43,7 @@ npm install
 
 ```bash
 cd /Users/fengye/workspace/blog/fengye404.github.io
-npx hexo new "你的文章标题"
+hexo new "你的文章标题"
 ```
 
 生成后编辑：
@@ -55,9 +55,9 @@ npx hexo new "你的文章标题"
 
 ```bash
 cd /Users/fengye/workspace/blog/fengye404.github.io
-npx hexo clean
-npx hexo generate
-npx hexo deploy
+hexo clean
+hexo generate
+hexo deploy
 ```
 
 这一步会把 `public/` 的内容发布到远程 `gh-pages` 分支（GitHub Pages 实际站点内容）。
@@ -109,7 +109,7 @@ git push origin hexo-source
 启动本地服务：
 
 ```bash
-npx hexo server
+hexo server
 ```
 
 默认访问地址：
@@ -119,10 +119,10 @@ npx hexo server
 常用命令：
 
 ```bash
-npx hexo clean     # 清理缓存与生成目录
-npx hexo generate  # 生成静态文件
-npx hexo server    # 本地预览
-npx hexo deploy    # 发布到 gh-pages
+hexo clean     # 清理缓存与生成目录
+hexo generate  # 生成静态文件
+hexo server    # 本地预览
+hexo deploy    # 发布到 gh-pages
 ```
 
 说明：`npm run clean/build/server/deploy` 在本仓库中是上述 Hexo 命令的等价封装。
@@ -132,7 +132,7 @@ npx hexo deploy    # 发布到 gh-pages
 创建新文章：
 
 ```bash
-npx hexo new "文章标题"
+hexo new "文章标题"
 ```
 
 由于已开启 `post_asset_folder: true`，建议将文章图片放在与文章同名的资源目录中（`source/_posts/<文章名>/`），并使用相对路径引用。
@@ -149,15 +149,15 @@ npx hexo new "文章标题"
 推荐发布步骤：
 
 ```bash
-npx hexo clean
-npx hexo generate
-npx hexo deploy
+hexo clean
+hexo generate
+hexo deploy
 ```
 
 说明：
 
-- `npx hexo generate` 会生成 `public/` 静态文件。
-- `npx hexo deploy` 通过 `hexo-deployer-git` 将内容推送到同仓库 `gh-pages` 分支。
+- `hexo generate` 会生成 `public/` 静态文件。
+- `hexo deploy` 通过 `hexo-deployer-git` 将内容推送到同仓库 `gh-pages` 分支。
 - 需要在 GitHub 仓库设置里确认 Pages 指向 `gh-pages` 分支（root）。
 - 自定义域名由 `source/CNAME` 管理，发布后会带到站点。
 
