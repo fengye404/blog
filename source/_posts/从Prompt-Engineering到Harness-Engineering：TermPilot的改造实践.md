@@ -16,7 +16,7 @@ tags:
 
 ## 前言
 
-我平时主要做 `Java` 服务端开发。`TermPilot` 不是日常工作的服务端项目，而是我业余时间写的一个端侧 `vibecoding` 项目。前期基本就是 `Codex + vibecoding` 的开发方式。功能先做出来，结构在开发过程中逐步成型，文档、脚本、协议边界也都有，但没有被系统化整理。
+我平时主要做 `Java` 服务端开发，`TermPilot` 是我业余时间写的一个端侧 `vibecoding` 项目。前期基本就是 `Codex + vibecoding` 的开发方式。功能先做出来，结构在开发过程中逐步成型，文档、脚本、协议边界也都有，但没有被系统化整理。
 
 后来补看了 OpenAI 的 [Harness engineering](https://openai.com/zh-Hans-CN/index/harness-engineering/) 之后，我回头整理了一轮 `TermPilot`，才意识到问题不在 prompt 本身，而在工程环境。
 
