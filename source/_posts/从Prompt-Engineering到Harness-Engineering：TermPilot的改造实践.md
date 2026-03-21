@@ -16,31 +16,35 @@ tags:
 
 ## 前言
 
+`TermPilot` 是我在做的一个基于 `tmux` 的终端会话跨端查看与轻控制项目。它不是远程桌面，也不是传统意义上的 Web SSH，而是把本地终端会话、移动端查看、配对授权和 relay 协作这几件事，以更轻量的方式串起来。
+
+这个项目最开始的开发方式，其实和很多个人项目差不多：我自己最熟悉系统边界，很多背景知识在脑子里；文档有一些，测试脚本也有一些，但它们更像“辅助材料”，还没有形成一套稳定的工作流。自己写代码的时候问题不大，但一旦开始让 coding agent 真正持续参与开发，问题就很快暴露出来了。
+
+改造前，很多事情的默认路径还是“先聊、先做、靠经验兜底”。一个复杂需求过来，先靠上下文讲清楚，再让 agent 动手；如果中间哪里偏了，就继续补充说明；改完之后再人工判断哪里需要跑验证、哪里需要补文档。这个流程不能说不能用，但它本质上是“人记住一切，然后 agent 局部执行”。
+
+有了这轮 harness 改造之后，开发方式就开始不一样了。现在更像是：先让仓库自己表达清楚边界和真相，复杂任务先留 plan，再让 agent 沿着固定入口去读、去改、去跑验证；如果它越界或者漏了同步更新，脚本和 CI 会直接报错。也就是说，原来很多靠“人脑维护”的东西，开始慢慢转成了“仓库自己维护”。
+
 最开始看到 OpenAI 的 [Harness engineering](https://openai.com/zh-Hans-CN/index/harness-engineering/) 这篇文章时，我的第一反应其实很朴素：这不就是给 coding agent 补一套仓库规范吗？
 
-后来真的在 `TermPilot` 上动手改了一轮，我发现这个理解还是太窄了。
-
-如果只是“补一篇 `AGENTS.md`，再加几篇说明文档”，agent 的体验确实会稍微好一点，但远远谈不上 harness engineering。因为 agent 真正依赖的不是一份说明书，而是一整套可以工作的工程支架：它怎么进仓库、怎么判断边界、怎么跑验证、怎么复盘失败、怎么避免知识继续漂移。
+后来真的在 `TermPilot` 上动手改了一轮，我发现这个理解还是太窄了。因为如果只是“补一篇 `AGENTS.md`，再加几篇说明文档”，agent 的体验确实会稍微好一点，但远远谈不上 harness engineering。agent 真正依赖的不是一份说明书，而是一整套可以工作的工程支架：它怎么进仓库、怎么判断边界、怎么跑验证、怎么复盘失败、怎么避免知识继续漂移。
 
 这也是我后来觉得这个话题很有意思的地方。以前大家讨论得更多的是 prompt engineering，也就是怎么把一句话写对、把提示词调顺。但开始让 agent 真正在代码仓库里连续工作之后，问题重心会明显变化。真正影响效果的，往往不再是 prompt 本身，而是环境是不是清楚、边界是不是稳定、错误是不是会立刻暴露出来。
 
-最近我正好把自己的一个已有项目 `TermPilot` 做了一轮这样的改造。这个项目本来就已经有比较完整的架构说明、开发文档和测试脚本，但它更偏“人类开发者友好”，还不是“agent 可以稳定接手”的状态。
+这篇文章就结合这次实战，讲讲我怎么把一个**已经存在的工程**往 harness engineering 的方向推，以及这个过程里，我对开发方式本身的理解是怎么变化的。
 
-这篇文章就结合这次实战，讲讲我怎么把一个**已经存在的工程**往 harness engineering 的方向推，以及在这个过程中，我对这个概念本身有哪些修正。
+## 1. 我后来对 harness engineering 的理解
 
-## 1. 我后来补看了一圈，觉得有四点特别重要
-
-改文之前，我又顺手看了几篇外部讨论，反而把自己的想法收得更具体了。OpenAI 那篇文章里最值钱的点，其实不是 `AGENTS.md`，而是“把 repo 变成 agent 的真实工作环境”。`AGENTS.md` 只是入口，真正重要的是版本化文档、边界、验证路径和可观测性都要进仓库。
-
-LangChain 最近两篇文章也把这件事说得更彻底。[Improving Deep Agents with harness engineering](https://blog.langchain.com/improving-deep-agents-with-harness-engineering/) 给了一个很直接的信号：模型不变，只改 harness，也能把 coding agent 的表现明显往上拉。[The Anatomy of an Agent Harness](https://blog.langchain.com/the-anatomy-of-an-agent-harness/) 则把 harness 拆成了更具体的组成，比如文件系统、工具、验证、trace、context compaction、长任务执行这些。这让我更确信一件事：**harness engineering 讨论的是系统设计，不是 prompt 小技巧。**
-
-另外，这个概念也很容易被误读成“多写一点上下文给 agent 看”。但近两个月关于 `AGENTS.md` 的两篇预印本研究其实都在提醒大家，事情没有这么简单：上下文文件可能带来帮助，也可能拉低成功率和推高成本，关键在于内容是不是必要、是不是足够短、是不是经过验证。[Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/abs/2602.11988) 的结论就很直接，人写的 context file 应该尽量只保留最小必要要求；另一篇 [On the Impact of AGENTS.md Files on the Efficiency of AI Coding Agents](https://arxiv.org/abs/2601.20404) 则说明这类文件也可能改善效率。把这两篇放在一起看，我的理解反而更清楚了：**`AGENTS.md` 不是银弹，也不是原罪，关键是别把它写成一个垃圾抽屉。**
-
-我还挺认同 Inngest 那篇 [Your Agent Needs a Harness, Not a Framework](https://www.inngest.com/blog/your-agent-needs-a-harness-not-a-framework) 里的一个视角：harness 不只是“提供上下文”，它还负责连接、保护和编排系统。在更复杂的 agent 产品里，重试、状态持久化、事件路由、审计轨迹，本质上都属于 harness。`TermPilot` 这次还没有走到那一步，但这个视角对我后面继续演进项目很有帮助。
-
-所以如果现在让我再用一句话总结，我会说：
+如果现在让我再用一句话总结，我会说：
 
 > harness engineering 不是给 agent 多喂一点提示，而是把工程系统改造成 agent 可以稳定执行、稳定验证、稳定收敛的工作环境。
+
+对我来说，这个概念至少包含三层意思。
+
+第一层，是仓库必须有明确入口。agent 不能靠猜，也不能靠你临时补充上下文，它需要一条稳定的进入路径，知道先看哪里，再看哪里，复杂任务要不要先留计划。
+
+第二层，是边界和约束要尽量机械化。只写在文档里的规则，其实仍然是软约束；真正有用的是把最重要的那些边界变成检查器、变成验证脚本、变成 CI。
+
+第三层，是知识要版本化。一个项目里最容易丢的往往不是代码，而是“为什么这样做”的背景。如果这些东西一直只存在聊天记录或者脑子里，那 agent 接手几轮之后，仓库很快就会重新变乱。
 
 ## 2. 老项目改造难，不是因为东西少，而是因为东西太多
 
