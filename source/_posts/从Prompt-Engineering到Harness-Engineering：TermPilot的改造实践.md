@@ -200,15 +200,17 @@ PLANS.md
 
 ## 5. 最后介绍一下 TermPilot
 
-`TermPilot` 主要解决的是一个很具体的场景：电脑上已经有一条终端会话在跑，你离开工位之后，还想继续从手机查看输出、补一条命令，或者做一些简单控制。
+上面这套改造，落地的对象就是 `TermPilot`。
 
-一个常见用法是这样的：
+它解决的是一个很具体的场景：电脑上已经有一条终端会话在跑，人离开工位之后，还想继续从手机查看输出、补一条命令，或者做一些简单控制。
+
+这类场景在日常开发里很常见，比如：
 
 - 你在电脑上跑 `Claude Code`
 - 或者跑部署脚本、数据库迁移、长时间批处理
 - 人离开工位后，用手机继续看会话状态
 
-如果你想快速试一下，可以直接按下面的顺序：
+如果你想快速试一下，可以按下面的顺序启动：
 
 1. 在一台手机可访问的机器上启动 `termpilot relay`
 2. 在自己的电脑上启动 `termpilot agent`
@@ -216,13 +218,13 @@ PLANS.md
 4. 在电脑上执行 `termpilot claude code`，或者 `termpilot run -- <command>`
 5. 然后在手机上继续看同一条会话
 
-我实际跑了一次当前 app 端，下面这张图就是一个实际使用场景：电脑上已经有一条 `deploy-prod-demo` 会话在跑，手机端接入后可以继续看输出，也可以补命令和做快捷控制。
+下面这张图就是我实际跑起来的一次使用场景。电脑上已经有一条 `deploy-prod-demo` 会话在跑，手机端接入后可以继续看输出，也可以补命令和做快捷控制。
 
 ![TermPilot 移动端页面截图](./termpilot-mobile-demo.png)
 
-项目地址：
+如果你想直接看项目本身：
 
 - 文档站：[https://fengye404.top/TermPilot/](https://fengye404.top/TermPilot/)
 - GitHub：[https://github.com/fengye404/TermPilot](https://github.com/fengye404/TermPilot)
 
-如果你对这类场景感兴趣，欢迎来试用，也欢迎顺手点个 Star。有问题或者想法，也可以直接提 Issue。
+欢迎试用，也欢迎点个 Star。有问题或者想法，可以直接提 Issue。
