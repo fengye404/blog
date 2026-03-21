@@ -1,6 +1,6 @@
 ---
-title: 如何将一个已有工程改造成 Harness Engineering 项目
-typora-root-url: ./如何将一个已有工程改造成Harness-Engineering项目
+title: 从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践
+typora-root-url: ./从Prompt-Engineering到Harness-Engineering：TermPilot的改造实践
 date: 2026-03-22 04:20:16
 tags:
   - AI
@@ -10,7 +10,7 @@ tags:
   - 软件架构
 ---
 
-# 如何将一个已有工程改造成 Harness Engineering 项目
+# 从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践
 
 > 本文由 AI 参与创作
 
@@ -303,3 +303,13 @@ PLANS.md
 
 如果你的项目已经有一定体量，我会非常建议尽早开始做这件事。因为项目越大，agent 越强，这套支架的重要性只会越来越高。
 
+## 13. 最后介绍一下 TermPilot
+
+`TermPilot` 是我在做的一个基于 `tmux` 的终端会话跨端查看与轻控制项目。它的目标不是远程桌面，也不是传统意义上的 Web SSH，而是把本地终端会话、移动端查看、配对授权和 relay 协作这几件事，以更轻量的方式串起来。
+
+如果你对这篇文章里提到的 harness engineering 改造细节感兴趣，也欢迎直接看项目本身：
+
+1. 文档站：[https://fengye404.top/TermPilot/](https://fengye404.top/TermPilot/)
+2. GitHub：[https://github.com/fengye404/TermPilot](https://github.com/fengye404/TermPilot)
+
+也欢迎大家顺手点个 Star，实际试一试；如果你在使用过程中有任何问题、想法或者改进建议，也非常欢迎提 Issue 一起讨论。
