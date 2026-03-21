@@ -22,11 +22,7 @@ tags:
 
 如果只是“补一篇 `AGENTS.md`，再加几篇说明文档”，agent 的体验确实会稍微好一点，但远远谈不上 harness engineering。因为 agent 真正依赖的不是一份说明书，而是一整套可以工作的工程支架：它怎么进仓库、怎么判断边界、怎么跑验证、怎么复盘失败、怎么避免知识继续漂移。
 
-这也是我后来觉得这个话题很有意思的地方。以前大家讨论得更多的是 prompt engineering，也就是怎么把一句话写对、把提示词调顺。但开始让 agent 真正在代码仓库里连续工作之后，问题重心就会明显变化：
-
-1. 不是“怎么把一句 prompt 写得更聪明”，而是“怎么把环境搭得更不容易出错”。
-2. 不是“告诉 agent 该怎么做”，而是“让它做错时立刻暴露出来”。
-3. 不是“让 agent 看懂你的仓库”，而是“把仓库改造成适合 agent 接手的形态”。
+这也是我后来觉得这个话题很有意思的地方。以前大家讨论得更多的是 prompt engineering，也就是怎么把一句话写对、把提示词调顺。但开始让 agent 真正在代码仓库里连续工作之后，问题重心会明显变化。真正影响效果的，往往不再是 prompt 本身，而是环境是不是清楚、边界是不是稳定、错误是不是会立刻暴露出来。
 
 最近我正好把自己的一个已有项目 `TermPilot` 做了一轮这样的改造。这个项目本来就已经有比较完整的架构说明、开发文档和测试脚本，但它更偏“人类开发者友好”，还不是“agent 可以稳定接手”的状态。
 
@@ -34,15 +30,13 @@ tags:
 
 ## 1. 我后来补看了一圈，觉得有四点特别重要
 
-改文之前，我又顺手看了几篇外部讨论，反而把自己的想法收得更具体了。
+改文之前，我又顺手看了几篇外部讨论，反而把自己的想法收得更具体了。OpenAI 那篇文章里最值钱的点，其实不是 `AGENTS.md`，而是“把 repo 变成 agent 的真实工作环境”。`AGENTS.md` 只是入口，真正重要的是版本化文档、边界、验证路径和可观测性都要进仓库。
 
-第一，OpenAI 那篇文章里最值钱的点，其实不是 `AGENTS.md`，而是“把 repo 变成 agent 的真实工作环境”。`AGENTS.md` 只是入口，真正重要的是版本化文档、边界、验证路径和可观测性都要进仓库。
+LangChain 最近两篇文章也把这件事说得更彻底。[Improving Deep Agents with harness engineering](https://blog.langchain.com/improving-deep-agents-with-harness-engineering/) 给了一个很直接的信号：模型不变，只改 harness，也能把 coding agent 的表现明显往上拉。[The Anatomy of an Agent Harness](https://blog.langchain.com/the-anatomy-of-an-agent-harness/) 则把 harness 拆成了更具体的组成，比如文件系统、工具、验证、trace、context compaction、长任务执行这些。这让我更确信一件事：**harness engineering 讨论的是系统设计，不是 prompt 小技巧。**
 
-第二，LangChain 最近两篇文章把这件事说得更彻底。[Improving Deep Agents with harness engineering](https://blog.langchain.com/improving-deep-agents-with-harness-engineering/) 里给了一个很直接的结论：模型不变，只改 harness，也能把 coding agent 的表现明显往上拉。[The Anatomy of an Agent Harness](https://blog.langchain.com/the-anatomy-of-an-agent-harness/) 则把 harness 拆成了更具体的东西，比如文件系统、工具、验证、trace、context compaction、长任务执行这些。这让我更确信一件事：**harness engineering 讨论的是系统设计，不是 prompt 小技巧。**
+另外，这个概念也很容易被误读成“多写一点上下文给 agent 看”。但近两个月关于 `AGENTS.md` 的两篇预印本研究其实都在提醒大家，事情没有这么简单：上下文文件可能带来帮助，也可能拉低成功率和推高成本，关键在于内容是不是必要、是不是足够短、是不是经过验证。[Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/abs/2602.11988) 的结论就很直接，人写的 context file 应该尽量只保留最小必要要求；另一篇 [On the Impact of AGENTS.md Files on the Efficiency of AI Coding Agents](https://arxiv.org/abs/2601.20404) 则说明这类文件也可能改善效率。把这两篇放在一起看，我的理解反而更清楚了：**`AGENTS.md` 不是银弹，也不是原罪，关键是别把它写成一个垃圾抽屉。**
 
-第三，这个概念也很容易被误读成“多写一点上下文给 agent 看”。但近两个月关于 `AGENTS.md` 的两篇预印本研究其实都在提醒大家，事情没有这么简单：上下文文件可能带来帮助，也可能拉低成功率和推高成本，关键在于内容是不是必要、是不是足够短、是不是经过验证。[Evaluating AGENTS.md: Are Repository-Level Context Files Helpful for Coding Agents?](https://arxiv.org/abs/2602.11988) 的结论就很直接，人写的 context file 应该尽量只保留最小必要要求；另一篇 [On the Impact of AGENTS.md Files on the Efficiency of AI Coding Agents](https://arxiv.org/abs/2601.20404) 则说明这类文件也可能改善效率。把这两篇放在一起看，我的理解反而更清楚了：**`AGENTS.md` 不是银弹，也不是原罪，关键是别把它写成一个垃圾抽屉。**
-
-第四，我还挺认同 Inngest 那篇 [Your Agent Needs a Harness, Not a Framework](https://www.inngest.com/blog/your-agent-needs-a-harness-not-a-framework) 里的一个视角：harness 不只是“提供上下文”，它还负责连接、保护和编排系统。在更复杂的 agent 产品里，重试、状态持久化、事件路由、审计轨迹，本质上都属于 harness。`TermPilot` 这次还没有走到那一步，但这个视角对我后面继续演进项目很有帮助。
+我还挺认同 Inngest 那篇 [Your Agent Needs a Harness, Not a Framework](https://www.inngest.com/blog/your-agent-needs-a-harness-not-a-framework) 里的一个视角：harness 不只是“提供上下文”，它还负责连接、保护和编排系统。在更复杂的 agent 产品里，重试、状态持久化、事件路由、审计轨迹，本质上都属于 harness。`TermPilot` 这次还没有走到那一步，但这个视角对我后面继续演进项目很有帮助。
 
 所以如果现在让我再用一句话总结，我会说：
 
@@ -52,34 +46,17 @@ tags:
 
 新项目如果从一开始就是 agent-first 的思路，很多结构可以一开始就摆正。老项目反而更麻烦，因为它通常不是“什么都没有”，而是“什么都有一点”。
 
-`TermPilot` 改造前其实就是这种状态：
+`TermPilot` 改造前其实就是这种状态：有文档，但对外文档、开发说明、内部约定混在一起；有测试脚本，但有些路径对“我的机器”友好，对“这个仓库”不友好；有架构说明，但不少东西停留在“大家都知道”的层面；也有开发经验，但很多关键上下文只存在于历史聊天或者我自己的脑子里。
 
-1. 有文档，但用户文档、开发文档、内部约定混在一起。
-2. 有测试脚本，但有些路径对“我的机器”友好，对“这个仓库”不友好。
-3. 有架构说明，但不少东西停留在“大家都知道”的层面。
-4. 有开发经验，但很多关键上下文只存在于历史聊天或者我自己的脑子里。
-
-所以这轮改造我一开始就给自己定了几个边界：
-
-1. 不去重构对外的文档站。
-2. 单独补一层面向 agent 的内部工程系统。
-3. 尽量把“约定”变成“检查”。
-4. 尽量把“我本机能跑”变成“仓库原生能跑”。
-5. 尽量把“聊过就算了”变成“留在 repo 里”。
+所以这轮改造我一开始就给自己定了几个边界：不去碰对外文档的主体结构，只补一层面向 agent 的内部工程系统；尽量把“约定”变成“检查”；尽量把“我本机能跑”变成“仓库原生能跑”；尽量把“聊过就算了”变成“留在 repo 里”。
 
 ## 3. 第一步：把“给用户看的文档”和“给 agent 看的文档”分层
 
 这一步非常关键。
 
-很多项目已经有 `docs/`，但那通常是用户手册、部署手册、功能介绍，默认面向人类读者。agent 需要的则是另一种信息：
+很多项目已经有 `docs/`，但那通常是用户手册、部署手册、功能介绍，默认面向人类读者。agent 需要的则是另一种信息：仓库入口在哪，代码边界怎么分，哪些原则不能碰，复杂改动怎么留痕，改完之后跑什么验证。
 
-1. 仓库入口在哪。
-2. 代码边界怎么分。
-3. 哪些原则绝对不能破坏。
-4. 复杂改动应该怎么留痕。
-5. 改完之后跑什么验证。
-
-在 `TermPilot` 里，我没有去碰原来的 VitePress 文档站，而是在仓库根目录和 `.agent/` 目录下单独建了内部知识体系：
+在 `TermPilot` 里，我没有去动现有的对外文档结构，而是在仓库根目录和 `.agent/` 目录下单独建了内部知识体系：
 
 ```text
 AGENTS.md
@@ -95,12 +72,7 @@ PLANS.md
   exec-plans/
 ```
 
-这里的设计思路是：
-
-1. `AGENTS.md` 很短，只做入口地图。
-2. `ARCHITECTURE.md` 负责顶层代码和运行时关系。
-3. `PLANS.md` 负责告诉 agent 复杂任务必须走执行计划。
-4. `.agent/` 才是真正长期积累的内部工程知识库。
+这里的思路其实很简单：`AGENTS.md` 很短，只做入口地图；`ARCHITECTURE.md` 负责顶层代码和运行时关系；`PLANS.md` 负责告诉 agent 复杂任务必须走执行计划；`.agent/` 才是真正长期积累的内部工程知识库。
 
 也就是说，**不要把 `AGENTS.md` 写成百科全书**。它最重要的价值不是“内容多”，而是“告诉 agent 下一步该读什么”。
 
@@ -112,20 +84,7 @@ PLANS.md
 
 所以我在 `TermPilot` 里做的第二件事，是把之前散落在架构说明、开发文档、历史讨论里的原则，集中成几个内部真相。
 
-比如这几个原则非常关键：
-
-1. session 的 source of truth 在 `agent`，不在 `relay`。
-2. `relay` 只保存 pairing、grant、audit 这类元数据。
-3. `app` 的定位是 viewing、light input、light control，不是桌面远控。
-4. 跨 runtime 的共享结构必须走 `@termpilot/protocol`。
-5. `shell` 和 `command` session 的退出语义不能混淆。
-
-这些内容分别沉淀到了：
-
-1. `AGENTS.md` 里的 golden rules。
-2. `.agent/core-beliefs.md`
-3. `.agent/runtime-boundaries.md`
-4. `.agent/known-invariants.md`
+比如几个关键原则，我最后都明确写进去了：session 的 source of truth 在 `agent`，不在 `relay`；`relay` 只保存 pairing、grant、audit 这类元数据；`app` 的定位是 viewing、light input、light control，不是桌面远控；跨 runtime 的共享结构必须走 `@termpilot/protocol`；`shell` 和 `command` session 的退出语义不能混淆。这些内容后来分别沉淀进了 `AGENTS.md` 的 golden rules，以及 `.agent/core-beliefs.md`、`.agent/runtime-boundaries.md`、`.agent/known-invariants.md`。
 
 这类文档的目标不是“解释项目为什么伟大”，而是让 agent 在改代码之前，先拿到一组不会轻易漂移的判断依据。
 
@@ -137,14 +96,7 @@ PLANS.md
 
 所以我在 `TermPilot` 里增加了 `PLANS.md` 和 `.agent/exec-plans/`，要求跨 runtime、跨模块、行为有歧义的任务，先落成执行计划再动手。
 
-这类 plan 不需要写成 PRD，但至少要有：
-
-1. 目标。
-2. 非目标。
-3. 涉及模块。
-4. 验收标准。
-5. 风险和回滚点。
-6. 后续 debt。
+这类 plan 不需要写成 PRD，但至少要把目标、非目标、涉及模块、验收标准、风险和后续 debt 这些东西说清楚。
 
 这个动作的价值在于，它把原本“在脑子里”的上下文，变成了仓库的一部分。
 
@@ -168,14 +120,9 @@ PLANS.md
 }
 ```
 
-这个检查器会扫描关键源码目录，只允许明确合法的依赖关系，例如：
+这个检查器会扫描关键源码目录，只允许明确合法的依赖关系。比如 `app` 不能直接 import `agent` 或 `relay` 的源码，`agent`、`relay`、`app` 跨边界共享类型时必须经过 `@termpilot/protocol`，根 CLI 只允许做顶层组装，不允许把所有运行时耦合成一团，未分类的 repo import 默认也不放行，只保留显式白名单。
 
-1. `app` 不能直接 import `agent` 或 `relay` 的源码。
-2. `agent`、`relay`、`app` 跨边界共享类型时，必须经过 `@termpilot/protocol`。
-3. 根 CLI 只允许做顶层组装，不允许把所有运行时耦合成一团。
-4. 未分类的 repo import 默认不放行，只保留显式白名单。
-
-这类检查的意义，不在于“写一个很复杂的静态分析器”，而在于把项目最重要的架构约束机械化。只要这一步做了，agent 的行为就会自然收敛很多。
+这类检查的意义，不在于“写一个很复杂的静态分析器”，而在于把项目最重要的架构约束机械化。只要这一步做了，agent 的行为就会自然收敛很多。对我来说，这一步最有实感的地方是：很多以前只会写在架构文档里的话，现在终于开始变成会报错的东西了。
 
 这一点其实也是我对 harness engineering 最大的体感变化：以前我会把很多话写在文档里，希望后来的人“记得遵守”；现在更自然的思路是，能不能直接让仓库自己检查出来。
 
@@ -185,10 +132,9 @@ PLANS.md
 
 最初 `TermPilot` 的部分 UI 冒烟路径依赖本机 skill 路径，本质上属于“我这台机器能跑，但仓库本身没有完整表达这个能力”。这种东西对单人开发还凑合，对 agent 和 CI 都不够友好。
 
-所以后面我做了两件事：
+所以后面我做了两件事。第一，把 UI smoke 改成仓库原生的 Playwright 脚本；第二，把 E2EE 和烟测入口统一到 Node/TS 侧，旧的 Python 脚本只保留兼容包装层。
 
-1. 把 UI smoke 改成仓库原生的 Playwright 脚本。
-2. 把 E2EE 和烟测入口统一到 Node/TS 侧，旧的 Python 脚本只保留兼容包装层。
+这里有个很具体的例子。最初的 UI smoke 依赖我本机的一套 skill 路径，这种东西自己用的时候问题不大，但一旦换到 agent 或 CI 环境里，基本就等于“没有”。后来我把它收敛成仓库里的 `scripts/check-ui-smoke.ts`，并把 `scripts/ui_smoke.py`、`scripts/test_e2ee.py`、`scripts/verify_e2ee.py` 变成兼容包装层，真正的入口统一走根脚本。这一步做完之后，整个验证链的感觉就完全不一样了，因为它终于属于仓库本身，而不是属于我某台机器。
 
 最终根脚本整理成了这样：
 
@@ -203,14 +149,7 @@ PLANS.md
 }
 ```
 
-这里我刻意把验证拆成了几层：
-
-1. `verify:fast` 负责日常快速回路。
-2. `verify:full` 负责 CI 默认全量回路。
-3. `verify:browser` 负责浏览器烟测。
-4. `verify:e2ee` 负责跨端行为验证。
-
-这么拆的原因很简单：**不是所有改动都值得拉起最重的验证，但每种改动都应该有一条清晰的验证路径。**
+这里我刻意把验证拆成几层：`verify:fast` 负责日常快速回路，`verify:full` 负责 CI 默认全量回路，`verify:browser` 负责浏览器烟测，`verify:e2ee` 负责跨端行为验证。原因也很简单：**不是所有改动都值得拉起最重的验证，但每种改动都应该有一条清晰的验证路径。**
 
 后来我回过头看，这其实已经很接近 agent 时代常说的 eval 思路了。对于代码仓库来说，最实用的 eval 往往不是单独搭一套 fancy 平台，而是先把“什么改动跑什么检查”这件事整理清楚，让 agent 自己能跑，也让 CI 能复跑。
 
@@ -218,15 +157,7 @@ PLANS.md
 
 如果只检查代码正确性，不检查知识正确性，agent 最后还是会把仓库带回混乱状态。
 
-所以我在 `TermPilot` 里加了两类和文档相关的检查：
-
-1. `check:repo-docs`
-2. `check:public-docs`
-
-前者主要检查内部文档体系是否完整，后者更重要，它会根据 `.agent/public-doc-map.json` 判断：
-
-1. 哪些实现目录发生了变化。
-2. 这些变化是否触发了对应公共文档的同步更新。
+所以我在 `TermPilot` 里加了两类和文档相关的检查：`check:repo-docs` 和 `check:public-docs`。前者主要检查内部文档体系是否完整，后者更重要，它会根据 `.agent/public-doc-map.json` 判断哪些实现目录发生了变化，以及这些变化是否触发了对应文档的同步更新。
 
 也就是说，如果你改了某些关键实现，但没有触碰对应的公共文档，这个检查就会直接报错。
 
@@ -234,27 +165,17 @@ PLANS.md
 
 **让知识漂移也变成可被发现的问题。**
 
-我很喜欢这个改动的一点是，它不再默认“文档过期是正常的”。以前文档总像一个没人追责的角落；现在至少在关键路径上，它开始和实现一起被检查了。
+我很喜欢这个改动的一点是，它不再默认“文档过期是正常的”。以前文档总像一个没人追责的角落；现在至少在关键路径上，它开始和实现一起被检查了。这个变化虽然不大，但很有那种工程气质上的差别。
 
 ## 9. 第七步：把这些规则放进 CI，而不是靠自觉
 
 只要一个规则还停留在“团队约定”，它就迟早会被遗忘。
 
-所以在 `TermPilot` 里，我新增了 PR 级别的 CI 工作流，主要做两件事：
+所以在 `TermPilot` 里，我新增了 PR 级别的 CI 工作流。主 job 会跑 `verify:fast`、build、文档构建和 runtime checks，另外单独拆了一个 `ui-smoke` job，在 CI 里安装 Chromium 后执行 repo-native 浏览器烟测。
 
-1. 跑 `verify` job，覆盖 `verify:fast`、build、docs build 和 runtime checks。
-2. 单独跑 `ui-smoke` job，安装 Chromium 后执行 repo-native 浏览器烟测。
+这么做的好处也很直接：快回路和慢回路分离，默认 CI 不会被最重的浏览器任务拖死；浏览器路径也不再是“本机私有能力”，而是仓库自己的验证能力。
 
-这么做有两个好处：
-
-1. 快回路和慢回路分离，默认 CI 不会被最重的浏览器任务拖死。
-2. 浏览器路径不再是“本机私有能力”，而是仓库自己的验证能力。
-
-到这一步为止，agent 的工作方式就开始发生变化了：
-
-1. 它不是“随便改完试试看”。
-2. 它会顺着 `AGENTS.md -> 内部知识库 -> 计划 -> 验证脚本 -> CI` 这条链路工作。
-3. 如果它偏离边界，仓库会自己把它拽回来。
+到这一步为止，agent 的工作方式就开始发生变化了。它不再是“随便改完试试看”，而是会顺着 `AGENTS.md -> 内部知识库 -> 计划 -> 验证脚本 -> CI` 这条链路工作；如果它偏离边界，仓库会自己把它拽回来。
 
 这才是 harness 的价值。它不是让 agent “更聪明”，而是让系统对 agent 的工作方式更友好，也对错误更不宽容。
 
@@ -262,27 +183,13 @@ PLANS.md
 
 如果复盘 `TermPilot` 这轮改造，我觉得最核心的变化不是“多了几份 markdown”或者“多了几条 npm script”，而是仓库的角色变了。
 
-改造前，这个仓库更像一个存量资产库：代码在这里，文档在这里，脚本也在这里，但它们并没有形成一个对 agent 友好的闭环。改造后，这个仓库开始更像一个工作面：
-
-1. agent 知道从哪里进入。
-2. 知道哪些信息是内部真相。
-3. 知道复杂任务应该先留 plan。
-4. 知道改完之后该跑什么。
-5. 如果越界，仓库和 CI 会直接报错。
+改造前，这个仓库更像一个存量资产库：代码在这里，文档在这里，脚本也在这里，但它们并没有形成一个对 agent 友好的闭环。改造后，这个仓库开始更像一个工作面：agent 知道从哪里进入，知道哪些信息是内部真相，知道复杂任务应该先留 plan，知道改完之后该跑什么，如果越界，仓库和 CI 会直接报错。
 
 我自己最满意的地方也在这里。以前仓库更像是在“存东西”，现在它开始有点像在“管行为”了。
 
 ## 11. 如果你也要改一个老项目，我建议按这个顺序来
 
-如果你手里也有一个已有工程，想往 harness engineering 的方向升级，我建议按下面这个顺序推进：
-
-1. 先建 `AGENTS.md`，但只写入口，不写大全。
-2. 把内部 agent 文档和用户文档彻底分层。
-3. 把架构原则收敛成 golden rules 和 invariants。
-4. 增加 plan 机制，让复杂任务版本化。
-5. 先做最小可用的 `check:architecture`。
-6. 再整理 repo-native 的 `verify:fast` / `verify:full`。
-7. 最后补 doc freshness 和 CI 级别回路。
+如果你手里也有一个已有工程，想往 harness engineering 的方向升级，我还是建议按一个比较克制的顺序推进：先建一个很短的 `AGENTS.md`，把内部 agent 文档和对外文档彻底分层，再把架构原则收敛成 golden rules 和 invariants；接着补 plan 机制，让复杂任务版本化，然后做最小可用的 `check:architecture`，再整理 repo-native 的 `verify:fast` / `verify:full`，最后再补 doc freshness 和 CI 级别回路。
 
 不要一上来就追求“把所有规则都自动化”。对已有工程来说，更现实的路径是先把最关键的 20% 原则机械化，它们往往能解决 80% 的混乱。
 
@@ -294,11 +201,7 @@ PLANS.md
 
 当 agent 开始持续参与开发之后，真正决定效果上限的，往往不再是那一句 prompt 写得多漂亮，而是你的仓库有没有边界、有没有入口、有没有验证、有没有把经验沉淀成系统。
 
-所以对我来说，这次 `TermPilot` 改造最大的收获不是“我把一套方法论落地了”，而是我开始更清楚地知道，下一步该继续补什么：
-
-1. 更多 repo-native 的验证能力。
-2. 更细的文档 freshness 规则。
-3. 更强的 runtime 级可观测性和回放能力。
+所以对我来说，这次 `TermPilot` 改造最大的收获不是“我把一套方法论落地了”，而是我开始更清楚地知道，下一步该继续补什么：更多 repo-native 的验证能力，更细的文档 freshness 规则，更强的 runtime 级可观测性和回放能力。
 
 如果你的项目已经有一定体量，我会很建议尽早开始做这件事。因为项目越大、上下文越多、协作越复杂，harness 的价值只会越来越明显。
 
@@ -306,9 +209,6 @@ PLANS.md
 
 `TermPilot` 是我在做的一个基于 `tmux` 的终端会话跨端查看与轻控制项目。它的目标不是远程桌面，也不是传统意义上的 Web SSH，而是把本地终端会话、移动端查看、配对授权和 relay 协作这几件事，以更轻量的方式串起来。
 
-如果你对这篇文章里提到的 harness engineering 改造细节感兴趣，也欢迎直接看项目本身：
-
-1. 文档站：[https://fengye404.top/TermPilot/](https://fengye404.top/TermPilot/)
-2. GitHub：[https://github.com/fengye404/TermPilot](https://github.com/fengye404/TermPilot)
+如果你对这篇文章里提到的 harness engineering 改造细节感兴趣，也欢迎直接看项目本身。文档站在 [https://fengye404.top/TermPilot/](https://fengye404.top/TermPilot/)，GitHub 在 [https://github.com/fengye404/TermPilot](https://github.com/fengye404/TermPilot)。
 
 也欢迎大家顺手点个 Star，实际试一试；如果你在使用过程中有任何问题、想法或者改进建议，也非常欢迎提 Issue 一起讨论。
