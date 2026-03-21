@@ -22,9 +22,7 @@ tags:
 
 后来补看了 OpenAI 的 [Harness engineering](https://openai.com/zh-Hans-CN/index/harness-engineering/) 之后，我回头整理了一轮 `TermPilot`，才意识到自己前面更关注单次任务怎么往下推进，对工程环境本身关注得不够。
 
-这篇文章就讲一件事：一个已经在持续开发的项目，怎么往 harness engineering 的方向改。
-
-现在回头看，harness engineering 更像一种工程设计思路，核心是怎么组织入口、约束、验证和反馈。
+这篇文章真正想讲的是：当 agent 开始持续参与开发之后，工程系统本身要发生什么变化。对我来说，harness engineering 讲的就是这一层，讲的是仓库怎样组织入口，约束怎样落成规则，验证怎样形成反馈回路。
 
 ## 1. 先说结论：harness engineering 解决的是什么问题
 
