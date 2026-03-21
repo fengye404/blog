@@ -16,15 +16,15 @@ tags:
 
 ## 前言
 
-`TermPilot` 是我业余时间写的一个项目，主要解决的是电脑上的终端会话怎么继续带到手机上。前期基本就是 `Codex + vibecoding` 的开发方式，功能先做出来，结构在开发过程中逐步成型，文档、脚本、协议边界也都有，但没有被系统化整理。
+`TermPilot` 是我业余时间写的一个项目，主要解决的是电脑上的终端会话怎么继续带到手机上。前期基本就是 `Codex + vibecoding` 的开发方式，功能先做出来，结构在开发过程中逐步成型，文档、脚本、协议边界也都有，但一直没有被系统化整理。
 
-我平时主要做 `Java` 服务端开发，所以这次改造对我反而更有启发。它虽然发生在一个个人端侧项目里，但这里讨论的并不是“已有仓库天然就有的大问题”，而是当你开始让 agent 深度参与开发、开始用 `vibecoding` 的方式持续推进时，哪些工程问题会被集中放大出来。这个判断放回已有的 `Java` 服务端仓库里，同样成立。
+我平时主要做 `Java` 服务端开发，所以这次改造对我很有启发。它发生在一个个人端侧项目里，但文章里讨论的这类问题并不局限于端侧。只要开始让 agent 深度参与开发，开始用 `vibecoding` 的方式持续推进，入口不清晰、边界不稳定、验证难复跑这些工程问题就会很快暴露出来。这个判断放回已有的 `Java` 服务端仓库里，同样成立。
 
-后来补看了 OpenAI 的 [Harness engineering](https://openai.com/zh-Hans-CN/index/harness-engineering/) 之后，我回头整理了一轮 `TermPilot`，才意识到问题不在 prompt 本身，而在工程环境。
+后来补看了 OpenAI 的 [Harness engineering](https://openai.com/zh-Hans-CN/index/harness-engineering/) 之后，我回头整理了一轮 `TermPilot`，才意识到自己前面更关注单次任务怎么往下推进，对工程环境本身关注得不够。
 
-本文不讨论“如何从零设计一个 agent-first 项目”，只讨论一件事：一个已经在持续开发的项目，怎么往 harness engineering 的方向改。
+这篇文章就讲一件事：一个已经在持续开发的项目，怎么往 harness engineering 的方向改。
 
-现在回头看，harness engineering 更像一种工程设计思路。重点不在某个单点工具，而在系统怎样组织入口、约束、验证和反馈。
+现在回头看，harness engineering 更像一种工程设计思路，核心是怎么组织入口、约束、验证和反馈。
 
 ## 1. 先说结论：harness engineering 解决的是什么问题
 
