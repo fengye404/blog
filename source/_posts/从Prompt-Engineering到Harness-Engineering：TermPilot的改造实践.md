@@ -213,6 +213,20 @@ PLANS.md
 
 `TermPilot` 是我在做的一个基于 `tmux` 的终端会话共享项目，主要场景是电脑上已经有一条会话在运行，你可以继续从手机接入、查看和做一些简单操作。
 
+一个很典型的使用场景是：你在电脑上跑着一条会持续一段时间的任务，比如 Claude Code、部署脚本、数据库迁移或者长时间批处理；这时人离开了工位，但还想继续看输出、补一条命令、发一个中断，或者确认它是不是已经跑完了。`TermPilot` 现在主要就是围绕这条路径做的。
+
+如果你想最快感受一下，大致可以按这个顺序来：
+
+1. 在一台手机可访问的机器上启动 `termpilot relay`
+2. 在自己的电脑上启动 `termpilot agent`
+3. 用手机浏览器打开 relay 地址，输入配对码
+4. 在电脑上执行 `termpilot claude code`，或者 `termpilot run -- <command>`
+5. 然后在手机上继续看同一条会话
+
+我顺手跑了一下当前 app 端，下面这张图就是一个很接近日常使用的场景：电脑上已经有一条名为 `deploy-prod-demo` 的会话在跑，手机端进入同一条会话后，可以继续看输出、补命令和做快捷控制。
+
+![TermPilot 移动端页面截图](./termpilot-mobile-demo.png)
+
 如果你对这篇文章里提到的 harness engineering 改造细节感兴趣，也欢迎直接看项目本身。文档站在 [https://fengye404.top/TermPilot/](https://fengye404.top/TermPilot/)，GitHub 在 [https://github.com/fengye404/TermPilot](https://github.com/fengye404/TermPilot)。
 
 也欢迎大家顺手点个 Star，实际试一试；如果你在使用过程中有任何问题、想法或者改进建议，也非常欢迎提 Issue 一起讨论。
