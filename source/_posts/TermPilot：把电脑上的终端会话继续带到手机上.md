@@ -71,7 +71,7 @@ termpilot run -- <command>
 - 控制动作写回同一条本地会话
 - 会话退出也跟着这条受管理会话自己的语义走
 
-## 3. 和 Happy 比，我为什么还会做一个更窄的东西
+## 3. 和 Happy 的对比
 
 GitHub 上的 [Happy](https://github.com/slopus/happy) 其实已经做得很完整了。它的仓库首页写得很清楚：这是给 Claude Code 和 Codex 用的 mobile and web client，有 iOS、Android、Web、端到端加密、push、语音和设备切换这些能力。官方 self-hosting 文档也给到了单独的 [Happy Server 部署说明](https://happy.engineering/docs/guides/self-hosting/)。
 
