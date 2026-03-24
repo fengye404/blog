@@ -1,7 +1,7 @@
 ---
 title: TermPilot：把电脑上的终端会话继续带到手机上
 typora-root-url: ./TermPilot：把电脑上的终端会话继续带到手机上
-date: 2026-03-25 02:10:00
+date: 2026-03-21 02:10:00
 tags:
   - AI
   - Agent
@@ -14,13 +14,7 @@ tags:
 
 ## 前言
 
-前两天我写了一篇 [《从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践》](https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/)。那篇文章的重点是工程改造，讲的是当 agent 持续参与开发之后，仓库入口、边界约束、验证和 CI 应该怎么整理。
-
-但写完之后我发现，一个前提还没有单独讲清楚：`TermPilot` 到底是什么。
-
-如果项目本身没有先说明白，后面很多关于 harness engineering 的讨论其实是悬空的。因为文档体系、检查器和验证脚本这些东西，最终都不是为了“整理而整理”，而是为了服务一条具体的产品路径。
-
-所以这篇先单独把 `TermPilot` 讲清楚。
+这篇先不讨论工程改造，也不讨论 agent harness 怎么搭。先只讲一件事：`TermPilot` 到底是什么，它解决的是什么问题，为什么我会去做这样一个项目。
 
 `TermPilot` 是我业余时间写的一个项目，解决的是一个很具体的问题：电脑上已经有一条终端会话在跑了，人离开工位之后，怎么在手机上继续接上这条原会话，而不是重新开一个新的 shell。
 
@@ -118,11 +112,11 @@ termpilot run -- python -m http.server
 
 这个路径里我比较看重的一点是：手机端并不是重新开了一个“类似的环境”，而是在继续接你电脑上那条已经存在的会话。
 
-## 5. 为什么我觉得它值得单独写一篇
+## 5. 为什么我觉得它值得先单独写一篇
 
-前一篇写 harness engineering 的时候，`TermPilot` 更像那个落地对象。文章重点是我怎么把一个已经能跑的项目，整理成 agent 更容易进入、边界更稳定、验证更容易复跑的工程系统。
+`TermPilot` 当前最需要先说明白的，其实不是仓库怎么组织，也不是 CI 怎么接，而是产品边界本身。
 
-但如果项目本身没有先交代清楚，很多工程判断其实就失去了落点。
+如果项目本身没有先交代清楚，后面很多工程判断其实就失去了落点。
 
 比如：
 
@@ -133,10 +127,7 @@ termpilot run -- python -m http.server
 
 这些都不是抽象架构偏好，而是直接服务于产品边界的判断。因为 `TermPilot` 从一开始就不是远程桌面，也不是通用远控平台。它解决的问题更集中：让一条已经在电脑上运行的终端会话，可以被手机继续接上。
 
-所以我觉得更合理的阅读顺序应该是：
-
-1. 先把 `TermPilot` 是什么讲清楚
-2. 再去看我是怎么围绕这条产品路径整理工程系统的
+所以我觉得更合理的阅读顺序应该是，先把 `TermPilot` 是什么讲清楚，再去看我是怎么围绕这条产品路径整理工程系统的。
 
 ## 6. 当前边界
 
@@ -156,7 +147,7 @@ termpilot run -- python -m http.server
 
 如果你平时经常会在电脑上挂着一条长期任务，然后离开桌面之后还想继续看它、补一点轻控制，那 `TermPilot` 可能会比较适合你。
 
-后面那篇 [《从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践》](https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/) 讲的是这个项目的工程改造，这一篇先把项目本身讲清楚。两篇放在一起看，会更容易理解我后面为什么会去做那一轮 harness engineering 的整理。
+后面我会再单独写这个项目的工程改造，也就是它是怎么从“先把功能做出来”，逐步整理到更适合 agent 持续接手的状态。那一篇讲的是工程系统，这一篇先把项目本身讲清楚。
 
 项目地址：
 
