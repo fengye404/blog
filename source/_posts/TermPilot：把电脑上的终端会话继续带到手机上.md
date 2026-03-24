@@ -20,8 +20,6 @@ tags:
 
 这个项目从一开始就是按个人使用来收敛的：自己开发、自己部署、自己的手机接自己的机器。它不解决「团队协作」「多租户控制台」这类问题，只解决一条：**会话已经在跑了，怎样在另一块屏幕上接着用**。
 
-后面我又写了一篇 [`从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践`](https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/)，讲的是仓库入口、架构约束和 CI 怎么收束。这一篇只谈产品形状和使用方式，不谈 harness 细节。
-
 ## 1. 问题边界：要的是「同一条会话」，不是「再开一个 shell」
 
 手机上的 SSH 客户端很多，登录到机器再开一个 shell 并不难。麻烦在于：**新 shell 里没有你已经跑了一半的那条上下文**。
@@ -140,5 +138,3 @@ Happy 自托管路径里要起 `happy-server`，配 `PostgreSQL` 和 `Redis`，D
 
 - 文档站：<https://fengye404.top/TermPilot/>
 - GitHub：<https://github.com/fengye404/TermPilot>
-
-工程改造与仓库 harness 相关内容见姊妹篇：[从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践](https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/)。
