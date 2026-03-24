@@ -28,17 +28,21 @@ tags:
 
 ## 1. 整体架构
 
-整体上分成三个 runtime：
+TermPilot 分三个运行时：`relay`、`agent`、`app`。
 
-- **relay**：HTTP 入口、设备配对与授权、审计相关元数据、托管移动 Web 静态资源、WebSocket 转发。
-- **agent**：跑在家里实际干活的那台电脑上；负责本地 `tmux` 会话、输出回放、状态同步、与 `relay` 的长连接。
-- **app**：移动端页面，由 `relay` 直接提供，手机用浏览器打开即可，同时支持 PWA，体验趋近原生 APP。
+**relay** 跑在一台手机能访问到的机器上，通常是个人 VPS。它做这几件事：HTTP 入口、设备配对和授权管理、WebSocket 中转、托管移动端 Web 页面。relay 本身不存终端输出，只保留配对关系、授权令牌、审计日志这些元数据，默认用 SQLite，不需要额外搭 Postgres 或 Redis。
 
-数据流上，终端主内容在 `agent` 侧；`relay` 负责把浏览器和 `agent` 连起来，并持久化配对、grant 等必要元数据。
+**agent** 跑在家里实际干活的那台电脑上。它管理本地的 `tmux` 会话，负责终端输出的采集和回放，维护会话状态（标题、工作目录、运行状态），并通过 WebSocket 长连接和 relay 保持同步。会话的主数据存在这台机器上的 `~/.termpilot/state.json`，不上云。
 
-按前言里那三条来看：`npm` 全局装一个包，`relay`、`agent` 各一条命令拉起来；手机不用装独立客户端，浏览器打开 `relay` 就行，我也做了 PWA，手感能靠近原生一点。`relay` 丢在自己 VPS 上跑，默认 SQLite，不必为这个再搭 Postgres、Redis；`agent` 那台机器有 Node 和 `tmux` 就够。会话标题、滚动缓冲、当前目录、运行状态这些沉在 `agent`，`relay` 只扛入口和配对、授权一类元数据；线上走 `wss://`，传输和密钥若要抠细节，看仓库和 [文档站](https://fengye404.top/TermPilot/)。
+**app** 是移动端页面，React + xterm.js 做终端渲染，构建产物直接由 relay 托管。手机浏览器打开 relay 地址就能用，不需要下载独立客户端。做了触摸优化和 viewport 适配，支持添加到主屏幕，手感接近原生应用。
 
-本机会话要长期附着、分离、过一会再打开还是同一条，而不是跑完一条命令就散；`agent` 用 `tmux` 托管。第三节写手机看到的到底是不是桌上那条。
+数据流很直观：手机浏览器 ↔ relay ↔ agent。终端内容始终在 agent 侧产生和存储，relay 只负责把两端连起来，中间走的是端到端加密的密文。
+
+拿前言里那三条需求来对应：
+
+- **使用简单**：`npm install -g @fengye404/termpilot`，relay 和 agent 各一条命令拉起来。手机端不用装 app，浏览器打开就行。
+- **自部署简单**：relay 丢在 VPS 上，默认 SQLite，一个 Node 进程就够。agent 侧需要 Node 和 `tmux`，没有其他依赖。
+- **数据安全**：终端输出的主副本在 agent 本机，relay 不存也不解密；浏览器和 agent 之间用 ECDH P-256 + AES-GCM 做端到端加密。
 
 ## 2. 快速上手
 
@@ -46,84 +50,123 @@ tags:
 
 ```bash
 npm install -g @fengye404/termpilot
-
-# 部署在一台手机能访问到的机器上（常见是个人 VPS）
-termpilot relay
-
-# 在家里使用终端的那台电脑上
-termpilot agent --relay wss://your-domain.com/ws
-termpilot claude code
 ```
 
-不使用 `Claude Code` 时，也可以直接托管其它命令：
+然后在两台机器上各起一个进程。
+
+**relay（部署在 VPS 上）：**
 
 ```bash
-termpilot run -- <command>
+termpilot relay
 ```
 
-首次启动 `agent` 会打印设备信息与一次性配对码。手机浏览器访问 `relay` 的 Web 地址，输入配对码完成绑定。
-
-![agent 启动与配对码截图](./agent-pairing.png)
-
-绑定后，手机端展示的是家里机器上由 `TermPilot` 管理的那条会话：
-
-![手机端会话截图](./mobile-session.png)
-
-### 2.2 relay、TLS 与 tmux
-
-`relay` 必须落在手机当前网络能访问的路径上，常见做法是公网 VPS，或通过内网穿透得到等价地址。线上场景下 `agent` 与 `relay` 之间使用 `wss://`，需要可用的 TLS 证书与域名；具体参数与部署步骤见文档站。
-
-`agent` 依赖本机安装 `tmux`，附着、分离、回放等行为都遵循 `tmux`。除 Node.js 外需保证 `tmux` 可用。
-
-`relay` 启动示例：
+relay 默认监听 8787 端口。线上部署需要配 TLS，具体参数见文档站。
 
 ![relay 启动截图](./relay-start.png)
 
-更完整的 CLI、环境变量与排障说明：<https://fengye404.top/TermPilot/>。
+**agent（家里的电脑上）：**
+
+```bash
+termpilot agent --relay wss://your-domain.com/ws
+```
+
+首次启动会生成设备 ID 和一次性配对码。手机浏览器打开 relay 的 Web 地址，输入配对码就完成绑定。
+
+![agent 启动与配对码截图](./agent-pairing.png)
+
+绑定之后，在这台电脑上启动一个被 TermPilot 托管的会话：
+
+```bash
+# 跑 Claude Code
+termpilot claude code
+
+# 或者跑任意命令
+termpilot run -- <command>
+```
+
+手机端就能看到这条会话的实时输出，也能继续输入。
+
+![手机端会话截图](./mobile-session.png)
+
+### 2.2 几个前置条件
+
+- **relay 的网络可达性**：relay 必须部署在手机当前网络能访问到的地方，常见做法是公网 VPS，或者通过内网穿透拿到等价地址。agent 和 relay 之间走 `wss://`，需要有效的 TLS 证书和域名。
+- **tmux**：agent 依赖本机的 `tmux` 来托管会话，除 Node.js 外需要确保 `tmux` 已安装。
+- **Docker**：relay 也提供了 Docker 镜像，可以用 `docker run` 直接拉起来，数据卷挂载路径见仓库 README。
+
+更完整的 CLI 参数、环境变量和排障说明：<https://fengye404.top/TermPilot/>。
 
 ## 3. 背后的实现
 
-这一节只回答一件事：`TermPilot` 是怎么把前言里那几条需求落到代码和部署结构上的。
+这一节展开讲 TermPilot 怎么把前言里那几条需求落到具体实现上。
 
-### 3.1 手机看到的是不是桌上那条会话
+### 3.1 会话连续性：手机看到的是不是桌上那条
 
-需求是离开座位仍能盯着**同一条**终端、必要时继续输入。实现上要保证：手机侧看到的输出来自这条会话，键盘输入也写回这条会话；会话如何结束，跟 `tmux` 里这条的语义一致（例如关掉对应窗格即结束）。
+需求是离开座位后仍能盯着**同一条**终端，必要时继续输入。这件事要保证三点：
 
-桌面进入 `Claude Code` 后，信任目录、确认框仍在这条终端里完成，手机端只是同步视图，不会在云端另起一条 shell 冒充同一场景：
+1. 手机侧看到的输出来自这条 `tmux` 会话，不是另起的 shell。
+2. 手机侧的键盘输入写回的也是这条会话。
+3. 会话的生命周期和 `tmux` 里这条会话一致——窗格关了就是结束，不会有"云端残留"。
+
+agent 创建会话时实际执行的是 `tmux new-session -d`，后续所有操作——输入、输出采集、resize、kill——都通过 `tmux` 命令完成。手机端只是这条会话的同步视图，不会在 relay 或浏览器侧另起一条交互式 shell。
+
+拿 `Claude Code` 场景来说，桌面进入 `Claude Code` 后，信任目录、安全确认框这些交互仍然在这条终端里完成。手机端看到的就是这个过程：
 
 ![Claude Code 安全确认截图](./claude-trust-folder.png)
 
-### 3.2 relay 和 agent 各持久化什么
+为什么选 `tmux` 而不是直接 exec？因为我要的是会话能**挂住**——人走了它还在跑，回来还能接上。这正好是 `tmux` session 的语义：附着、分离、再附着。agent 把会话管理交给 `tmux`，自己只负责和 relay 之间同步状态和 IO。
 
-**relay 侧（默认 SQLite 即可）：**
+### 3.2 数据安全：存在哪、怎么加密
 
-- 配对关系、授权（grant）、审计类元数据。
+需求里说"数据存端侧、端到端加密"，实现上拆成两层。
 
-**agent 侧：**
+**第一层：持久化的分割**
 
-- 会话标题、当前工作目录、终端滚动缓冲、运行状态等。
+relay 侧（默认 SQLite，不用 ORM，直接 Node 22 内置 `node:sqlite` + 手写 SQL）只存三类东西：
 
-直接后果：
+- 配对关系（`relay_pairing_codes`）
+- 授权令牌（`relay_client_grants`）
+- 审计日志（`relay_audit_events`）
 
-1. 公网入口机器不保存终端输出的主副本，和需求里的「数据在端侧」对齐。
-2. 会话以家里 `agent` 为准；`relay` 重启或网络短时中断，本地 `tmux` 会话仍可保留，手机稍后重连仍是同一条。
-3. 手机端是这条会话的同步视图，不在入口机上再跑一套交互式 shell。
+这些是维持配对和授权必须的元数据。
 
-仓库里还有设备离线、会话退出、疑似残留会话等提醒，用来减少「以为还在跑其实早断了」的误判。
+agent 侧存的是会话实体：标题、当前工作目录、运行状态、终端滚动缓冲。它们落在本机的 `~/.termpilot/state.json` 和 `tmux` 进程里，有文件锁防并发写坏。
 
-### 3.3 为什么用 tmux
+直接后果：公网入口机器上不存终端输出的主副本。relay 重启或网络短暂中断，本地 `tmux` 会话不受影响，手机重连后还是同一条。
 
-要的是能挂住、能离开、能再打开还是同一条，而不是单次 `exec` 跑完就结束。`agent` 把这类会话语义交给 `tmux`，自己专注和 `relay` 同步状态与 IO。
+**第二层：传输加密**
 
-### 3.4 刻意不做的事
+浏览器和 agent 之间的业务消息——会话列表、终端输出、键盘输入——全部走端到端加密。协议层用 ECDH P-256 协商共享密钥，消息用 AES-GCM 加密。加密时还会把 `deviceId`、`accessToken`、`reqId` 序列化后作为 AAD（Additional Authenticated Data）传入，防止跨设备或跨请求的密文被挪用。
 
-`TermPilot` **不会**自动接管系统里已有的 Terminal、iTerm 等标签页。只有由本工具创建或显式纳入管理的会话，手机端才能访问。这样状态来源清晰，也避免全盘扫 PTY 带来的边界问题。
+relay 在中间只做消息转发，看到的是密文，解不开内容。
 
-### 3.5 和 Happy 等方案相比我收在哪里
+加密实现放在 `@termpilot/protocol` 这个共享包里，浏览器端优先走 Web Crypto API，Node 侧在需要时用 `@noble/curves` + `@noble/ciphers` 的纯 JS 路径兜底。
 
-[Happy](https://github.com/slopus/happy) 面向 `Claude Code` / Codex，提供 iOS、Android、Web、端到端加密、推送、语音、多设备等能力；[self-hosting 文档](https://happy.engineering/docs/guides/self-hosting/) 里自托管需要 `happy-server`、`PostgreSQL`、`Redis` 等，形态接近完整产品。
+### 3.3 输出同步：增量还是全量
 
-我这边把形状收成：`relay` + `agent` + 移动 Web，元数据默认 SQLite，会话实体在本地，部署和维护都少背一层。功能覆盖面比 Happy 小，但和前言里那三条需求更贴。两者解决的问题有重叠，按自己的半径选就行。
+agent 按动态间隔通过 `tmux capture-pane` 抓取当前屏幕内容（含最近 2000 行历史），和上一帧 buffer 做对比。如果新 buffer 是旧 buffer 的扩展（前缀一致，只多了尾部内容），就发一帧 `append`，只传增量部分；否则发 `replace`，传完整内容。这样在大缓冲场景下能显著减少重复传输。
+
+每帧带一个递增的 `seq`。手机端如果发现 seq 不连续——比如网络断了一会儿——就向 agent 发 `session.replay`，带上自己最后收到的 `afterSeq`。agent 侧维护了一个内存环形缓冲（每个会话最多 40 帧），能补回缺失的帧；如果断层太久或者缺了首帧 replace，就重新 `capture-pane` 打一帧 replace 发过去。
+
+这个机制让手机端在网络抖动之后能自动补齐中间的输出，而不是只看到最新一屏。
+
+### 3.4 设备配对
+
+配对流程用一次性配对码完成：
+
+1. agent 启动后向 relay 申请配对码（HTTP POST，需 agent token 认证），同时 relay 会校验该 agent 确实在线。
+2. 配对码格式是去掉易混淆字符后的字母数字组合，类似 `XXX-XXXX`，有效期默认 10 分钟。
+3. 手机浏览器打开 relay 地址，输入配对码。浏览器端同时生成一对 ECDH 密钥，把公钥随配对码一起提交。
+4. relay 验证配对码有效且未被使用后，签发一个 `accessToken`，返回 agent 的公钥。配对码标记为已兑换，SQLite 端用 `begin immediate` 事务防并发双花。
+5. 配对完成后，浏览器和 agent 各自持有对方的公钥，后续所有业务消息走端到端加密。
+
+整个过程不需要手动交换密钥或扫二维码，输入一个短码就够了。多个浏览器可以分别配对同一台 agent，daemon 会对每个 `accessToken` 各自加密推送，天然支持多终端同时查看。
+
+## 总结
+
+TermPilot 解决的是「人不在显示器前，仍要盯住同一条终端、必要时继续操作」这件事。实现上把会话的 source of truth 放在家里那台机器的 `agent` + `tmux` 上，公网 `relay` 只负责连通和配对授权，终端内容不经由入口机落盘；浏览器和 `agent` 之间用端到端加密，`relay` 只转发密文。
+
+如果你也想要：一行装包、两条命令起 relay/agent、手机浏览器打开即用、自托管不背一堆依赖，可以按第二节走一遍。协议细节、表结构、输出同步和配对流程在第三节有对应说明；更细的 CLI 与部署见文档站与仓库。
 
 ## 参考链接
 
