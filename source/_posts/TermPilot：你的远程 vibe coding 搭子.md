@@ -1,6 +1,6 @@
 ---
-title: TermPilot：把电脑上的终端会话继续带到手机上
-typora-root-url: ./TermPilot：把电脑上的终端会话继续带到手机上
+title: TermPilot：你的远程 vibe coding 搭子
+typora-root-url: ./TermPilot：你的远程 vibe coding 搭子
 date: 2026-03-21 02:10:00
 tags:
   - AI
@@ -8,7 +8,7 @@ tags:
   - 工程化
 ---
 
-# TermPilot：把电脑上的终端会话继续带到手机上
+# TermPilot：你的远程 vibe coding 搭子
 
 > 本文由 AI 参与创作
 

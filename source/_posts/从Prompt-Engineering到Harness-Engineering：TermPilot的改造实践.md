@@ -16,7 +16,7 @@ tags:
 
 ## 前言
 
-上一篇文章我先把 [`TermPilot`](https://fengye404.top/2026/03/21/TermPilot%EF%BC%9A%E6%8A%8A%E7%94%B5%E8%84%91%E4%B8%8A%E7%9A%84%E7%BB%88%E7%AB%AF%E4%BC%9A%E8%AF%9D%E7%BB%A7%E7%BB%AD%E5%B8%A6%E5%88%B0%E6%89%8B%E6%9C%BA%E4%B8%8A/) 这个项目本身讲了一遍，重点是它解决什么问题、产品边界在哪，以及为什么我会把它收敛成“会话连续性”这条主路径。
+上一篇文章我先把 [`TermPilot`](https://fengye404.top/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/) 这个项目本身讲了一遍，重点是它解决什么问题、产品边界在哪，以及为什么我会把它收敛成“会话连续性”这条主路径。
 
 这一篇往后走一步，讲它的工程改造。
 
