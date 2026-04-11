@@ -1,0 +1,7 @@
+- class_name:
+  class_desc:
+  bookmark_list:
+    - title: "Example Bookmark"
+      link: https://example.com
+      description: This is a placeholder. Replace with real bookmarks.
+      date: "2026-04-11"

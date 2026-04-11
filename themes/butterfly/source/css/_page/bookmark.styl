@@ -1,0 +1,75 @@
+.container
+  .bookmark-page
+    margin-bottom: 20px
+
+    h2
+      margin: 20px 0 10px
+      border-bottom: 1px solid var(--light-grey)
+      padding-bottom: 6px
+
+    .bookmark-group-desc
+      margin-bottom: 12px
+      color: var(--font-second-color)
+      font-size: .9em
+
+    .bookmark-list
+      overflow: auto
+      padding: 10px 0
+
+    .bookmark-item
+      display: block
+      position: relative
+      margin: 10px 0
+      padding: 16px 20px
+      background: var(--card-bg)
+      text-decoration: none
+      color: var(--font-color)
+      addBorderRadius(8)
+      transition: all .3s ease
+      border: 1px solid var(--light-grey)
+
+      &:hover
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .08)
+        border-color: var(--btn-bg)
+
+      .bookmark-item-header
+        display: flex
+        justify-content: space-between
+        align-items: center
+        margin-bottom: 6px
+
+      .bookmark-item-title
+        font-weight: bold
+        font-size: 1.1em
+        flex: 1
+        @extend .limit-one-line
+
+      .bookmark-item-date
+        flex-shrink: 0
+        margin-left: 12px
+        color: var(--font-second-color)
+        font-size: .85em
+
+      .bookmark-item-desc
+        @extend .limit-one-line
+        color: var(--font-second-color)
+        font-size: .9em
+        margin-bottom: 6px
+
+      .bookmark-item-link
+        @extend .limit-one-line
+        color: var(--btn-bg)
+        font-size: .8em
+
+        i
+          margin-right: 4px
+          font-size: .75em
+
+      +maxWidth600()
+        .bookmark-item-header
+          flex-direction: column
+          align-items: flex-start
+
+        .bookmark-item-date
+          margin-left: 0
+          margin-top: 4px

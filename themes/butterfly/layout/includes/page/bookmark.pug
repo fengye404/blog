@@ -1,0 +1,21 @@
+#article-container.container
+  .bookmark-page
+    if site.data.bookmarks
+      each group in site.data.bookmarks
+        if group.class_name
+          h2= group.class_name
+        if group.class_desc
+          .bookmark-group-desc= group.class_desc
+        .bookmark-list
+          each item in group.bookmark_list
+            a.bookmark-item(href=item.link, target="_blank", rel="noopener noreferrer")
+              .bookmark-item-header
+                .bookmark-item-title= item.title
+                if item.date
+                  .bookmark-item-date= item.date
+              if item.description
+                .bookmark-item-desc= item.description
+              .bookmark-item-link
+                i.fas.fa-external-link-alt
+                span= item.link
+    != page.content
