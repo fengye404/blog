@@ -2,6 +2,6 @@
   class_desc: 人工智能与大模型
   bookmark_list:
     - title: "Launching Claude Managed Agents"
-      link: https://x.com/RLanceMartin/status/2041927992986009773
+      link: /bookmarks/launching-claude-managed-agents/
       description: Lance Martin 介绍 Claude Managed Agents——预构建的可配置 Agent 框架，支持长时间任务和多 Agent 协作
       date: "2026-04-11"

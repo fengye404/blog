@@ -8,14 +8,27 @@
           .bookmark-group-desc= group.class_desc
         .bookmark-list
           each item in group.bookmark_list
-            a.bookmark-item(href=item.link, target="_blank", rel="noopener noreferrer")
-              .bookmark-item-header
-                .bookmark-item-title= item.title
-                if item.date
-                  .bookmark-item-date= item.date
-              if item.description
-                .bookmark-item-desc= item.description
-              .bookmark-item-link
-                i.fas.fa-external-link-alt
-                span= item.link
+            - var isExternal = item.link && item.link.startsWith('http')
+            if isExternal
+              a.bookmark-item(href=item.link, target="_blank", rel="noopener noreferrer")
+                .bookmark-item-header
+                  .bookmark-item-title= item.title
+                  if item.date
+                    .bookmark-item-date= item.date
+                if item.description
+                  .bookmark-item-desc= item.description
+                .bookmark-item-link
+                  i.fas.fa-external-link-alt
+                  span= item.link
+            else
+              a.bookmark-item(href=item.link)
+                .bookmark-item-header
+                  .bookmark-item-title= item.title
+                  if item.date
+                    .bookmark-item-date= item.date
+                if item.description
+                  .bookmark-item-desc= item.description
+                .bookmark-item-link
+                  i.fas.fa-book-open
+                  span 查看全文
     != page.content
