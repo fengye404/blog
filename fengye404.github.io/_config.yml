@@ -105,7 +105,7 @@ theme: butterfly
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: git
-  repo: https://github.com/fengye404/fengye404.github.io
+  repo: https://github.com/fengye404/blog
   branch: gh-pages
 
 search:
