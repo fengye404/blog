@@ -65,14 +65,41 @@ npx hexo clean && npx hexo deploy
 
 ## 收藏系统
 
-两种收藏方式：
+三种收藏方式：
 
-- **本地收藏**：通过 `fengye-bookmark` skill 直接在终端操作
-- **远程收藏**：在 GitHub 创建 Issue，标题填 URL，加 `bookmark` 标签，Action 自动抓取并提交
+### 1. 本地收藏（终端）
+
+通过 `fengye-bookmark` skill 直接在终端操作，适合在电脑前时使用。
+
+### 2. 远程收藏 — Issue 触发
+
+在手机或任何设备上：
+
+1. 打开 [New Issue](https://github.com/fengye404/blog/issues/new)
+2. **标题**填要收藏的 URL
+3. **正文**填备注（可选）
+4. 加上 `bookmark` 标签
+5. 提交，Action 自动抓取、生成文章、提交、关闭 Issue
+
+> 仅仓库 owner 的 Issue 会被执行，其他人的 Issue 会被自动关闭。
+
+### 3. 远程收藏 — 手动触发
+
+1. 打开 [Actions → Bookmark](https://github.com/fengye404/blog/actions/workflows/bookmark.yml)
+2. 点 **Run workflow**
+3. 填入 URL 和备注
+4. 点 **Run workflow** 执行
+
+> 仅有仓库写权限的人可以触发。
+
+### 收藏存储位置
 
 收藏内容同时写入两处：
-1. `fengye404.github.io/source/bookmarks/<slug>/` — 博客页面
-2. `bookmarks/articles/<slug>.md` — 本地存档
+
+| 位置 | 用途 |
+|---|---|
+| `fengye404.github.io/source/bookmarks/<slug>/` | 博客页面，hexo deploy 后线上可访问 |
+| `bookmarks/articles/<slug>.md` + `bookmarks/assets/` | 本地存档，纯 Markdown + 媒体文件 |
 
 ## 技术栈
 
