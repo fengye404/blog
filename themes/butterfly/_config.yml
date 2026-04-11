@@ -20,9 +20,8 @@ nav:
 menu:
    Home: / || fas fa-home
    Archives: /archives/ || fas fa-archive
-   About: /about/ || fas fa-heart
-   Link: /link/ || fas fa-link
    Bookmarks: /bookmarks/ || fas fa-bookmark
+   About: /about/ || fas fa-heart
 
 # --------------------------------------
 # Code Blocks Settings
