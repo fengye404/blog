@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+# Stage all changes
+git add -A
+
+# Check if there's anything to commit
+if git diff --cached --quiet; then
+  echo "Nothing to commit."
+  exit 0
+fi
+
+# Auto-generate commit message from staged changes
+msg="sync: $(date '+%Y-%m-%d %H:%M')"
+git commit -m "$msg"
+
+# Pull remote changes (rebase to keep history clean)
+git pull --rebase origin hexo-source || {
+  echo "Rebase conflict! Resolve manually."
+  exit 1
+}
+
+# Push
+git push origin hexo-source
+echo "Done."
