@@ -3,6 +3,15 @@ name: Bookmark
 on:
   issues:
     types: [labeled]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'URL to bookmark'
+        required: true
+      note:
+        description: 'Note (optional)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -13,8 +22,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Guard: close and reject issues from non-owner
+  guard:
+    if: github.event_name == 'issues' && github.event.issue.user.login != github.repository_owner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⛔ 仅仓库所有者可使用此功能。'
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              state: 'closed'
+            });
+
   bookmark:
-    if: contains(github.event.issue.labels.*.name, 'bookmark')
+    if: |
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'bookmark') && github.event.issue.user.login == github.repository_owner)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -41,19 +73,33 @@ jobs:
       - name: Install Claude Code CLI
         run: npm install -g @anthropic-ai/claude-code
 
+      - name: Set URL and note from trigger
+        id: params
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "url=${{ github.event.inputs.url }}" >> "$GITHUB_OUTPUT"
+            echo "note=${{ github.event.inputs.note }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "url=$ISSUE_TITLE" >> "$GITHUB_OUTPUT"
+            echo "note=$ISSUE_BODY" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+
       - name: Run bookmark agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           ANTHROPIC_BASE_URL: ${{ secrets.ANTHROPIC_BASE_URL }}
           X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+          BOOKMARK_URL: ${{ steps.params.outputs.url }}
+          BOOKMARK_NOTE: ${{ steps.params.outputs.note }}
         run: |
           claude -p "请严格按照 CLAUDE.md 中的收藏工作流，收藏以下 URL。
           不要跳过任何步骤，必须调用 python3 脚本抓取内容。
 
-          URL: ${ISSUE_TITLE}
-          备注: ${ISSUE_BODY}
+          URL: ${BOOKMARK_URL}
+          备注: ${BOOKMARK_NOTE}
 
           环境信息：
           - X_AUTH_TOKEN 已通过环境变量设置，fetch_tweet.py 会自动读取
@@ -74,7 +120,7 @@ jobs:
           git push origin hexo-source || echo "Nothing to push"
 
       - name: Close issue with comment
-        if: success()
+        if: success() && github.event_name == 'issues'
         uses: actions/github-script@v7
         with:
           script: |
