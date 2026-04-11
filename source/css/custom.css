@@ -1,4 +1,4 @@
-/* Reduce dark mode background overlay from 70% to 30% so background image is visible */
+/* Reduce dark mode background overlay from 70% to 60% */
 [data-theme="dark"] #web_bg:before {
-  background-color: rgba(0, 0, 0, 0.3) !important;
+  background-color: rgba(0, 0, 0, 0.6) !important;
 }
