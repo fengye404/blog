@@ -1,7 +1,7 @@
 - class_name: AI & LLM
   class_desc: 人工智能与大模型
   bookmark_list:
-    - title: "有做 AI Agent开发的吗，你们会用什么样的开源Agent框架？"
-      link: https://x.com/PandaTalk8/status/2042477940932563132
-      description: Mr Panda 发起的关于 AI Agent 开源框架选择的讨论
+    - title: "Launching Claude Managed Agents"
+      link: https://x.com/RLanceMartin/status/2041927992986009773
+      description: Lance Martin 介绍 Claude Managed Agents——预构建的可配置 Agent 框架，支持长时间任务和多 Agent 协作
       date: "2026-04-11"
