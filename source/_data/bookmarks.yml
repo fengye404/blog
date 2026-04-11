@@ -1,3 +1,7 @@
-- class_name:
-  class_desc:
-  bookmark_list: []
+- class_name: AI & LLM
+  class_desc: 人工智能与大模型
+  bookmark_list:
+    - title: "有做 AI Agent开发的吗，你们会用什么样的开源Agent框架？"
+      link: https://x.com/PandaTalk8/status/2042477940932563132
+      description: Mr Panda 发起的关于 AI Agent 开源框架选择的讨论
+      date: "2026-04-11"
