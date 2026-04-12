@@ -73,6 +73,8 @@ python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url
 
 查看第一步和第二步的输出，找到 tweet 正文中的外部 URL（如 `anthropic.com/...`、`medium.com/...`、`substack.com/...` 等，**排除** `x.com`、`twitter.com`、`t.co` 短链接本身的 tweet 链接）。
 
+> **特殊情况：X Article 链接**（`x.com/i/article/...`）。这是 X 的长文功能，需要登录才能查看，外部 fetcher 无法抓取。如果 tweet 内容只包含一个 X Article 链接且 fetch_tweet.py 的 `--full-article` 未能展开它，则直接使用 fetch_tweet.py 的结果（即使只有推文摘要），不要反复重试。
+
 如果找到了外部文章链接：
 ```bash
 python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<外部文章URL>" --download-media fengye404.github.io/source/bookmarks/<slug>
@@ -209,6 +211,7 @@ git commit -m "bookmark: <文章标题简写>"
 
 - X/Twitter URL 必须两个 fetcher 都运行，比较后选更完整的；只有一个失败时用另一个的结果
 - 两个都失败 → 在 Issue 中说明失败原因，不创建空文件
+- **所有 fetcher 都返回不到 100 字的有效正文** → 视为抓取失败，在 Issue 评论中说明原因并停止，不要反复尝试不同方法
 - 媒体下载失败 → 保留原始 URL（脚本已内置此行为）
 - 分类不确定 → 默认 "AI & LLM"
 - URL 404 / 内容不存在 → 输出说明，不创建空文件
