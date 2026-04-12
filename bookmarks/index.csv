@@ -6,3 +6,4 @@ Monolith First,Programming,https://martinfowler.com/bliki/MonolithFirst.html,Mar
 GitHub - anthropics/claude-code,AI & LLM,https://github.com/anthropics/claude-code,Claude Code 官方 GitHub 仓库：Anthropic 推出的终端智能编程工具，通过自然语言命令执行日常任务、解释复杂代码和处理 Git 工作流,articles/claude-code-github.md
 The Joel Test: 12 Steps to Better Code,Programming,https://www.joelonsoftware.com/2000/08/09/the-joel-test-12-steps-to-better-code/,Joel Spolsky 经典文章：评估软件团队质量的 12 个简单问题，满分 12 分，10 分以下说明团队存在严重问题,articles/joel-test-12-steps-better-code.md
 分布式系统的事务处理,Programming,https://coolshell.cn/articles/10910.html,"陈皓经典文章：深入讲解分布式系统中的事务处理，涵盖 Master-Slave/Master-Master、2PC/3PC、Paxos 算法、CAP 理论和 NWR 模型",articles/coolshell-10910.md
+Tree of Thoughts: Deliberate Problem Solving with Large Language Models,AI & LLM,https://arxiv.org/abs/2305.10601,"NeurIPS 2023 论文：提出 Tree of Thoughts (ToT) 框架，让大语言模型能够探索多条推理路径并自我评估选择，在 Game of 24 任务上成功率从 4% 提升到 74%",articles/tree-of-thoughts-llm.md

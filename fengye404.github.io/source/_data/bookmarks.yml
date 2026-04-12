@@ -37,6 +37,10 @@
 - class_name: AI & LLM
   class_desc: 人工智能与大语言模型
   link_list:
+    - title: "Tree of Thoughts: Deliberate Problem Solving with Large Language Models"
+      link: /bookmarks/tree-of-thoughts-llm/
+      description: "NeurIPS 2023 论文：提出 Tree of Thoughts (ToT) 框架，让大语言模型能够探索多条推理路径并自我评估选择，在 Game of 24 任务上成功率从 4% 提升到 74%"
+      date: "2026-04-12"
     - title: "GitHub - anthropics/claude-code"
       link: /bookmarks/claude-code-github/
       description: "Claude Code 官方 GitHub 仓库：Anthropic 推出的终端智能编程工具，通过自然语言命令执行日常任务、解释复杂代码和处理 Git 工作流"
