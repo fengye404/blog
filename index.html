@@ -1,0 +1,300 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>fengye's blog - fengye's blog</title><meta name="author" content="风业"><meta name="copyright" content="风业"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="fengye&#39;s blog">
+<meta property="og:type" content="website">
+<meta property="og:title" content="fengye&#39;s blog">
+<meta property="og:url" content="https://fengye404.top/index.html">
+<meta property="og:site_name" content="fengye&#39;s blog">
+<meta property="og:description" content="fengye&#39;s blog">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640">
+<meta property="article:author" content="风业">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "fengye's blog",
+  "alternateName": [
+    "fengye's blog",
+    "fengye404.top"
+  ],
+  "url": "https://fengye404.top/"
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://fengye404.top/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"No results found for: ${query}","hits_stats":"${hits} articles found"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Failed',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: 'days',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'fengye\'s blog',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'home'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><script>window.paceOptions = {
+  restartOnPushState: false
+}
+
+btf.addGlobalFn('pjaxSend', () => {
+  Pace.restart()
+}, 'pace_restart')
+
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js/themes/blue/pace-theme-minimal.min.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div class="bg-animation" id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">35</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">fengye's blog</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> Search</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><h1 class="title-seo">fengye's blog</h1></header><main class="layout" id="content-inner"><div class="recent-posts nc" id="recent-posts"><div class="recent-post-items"><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-03-22T04:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.218Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践 本文由 AI 参与创作  前言上一篇文章我先把 TermPilot 这个项目本身讲了一遍，重点是它解决什么问题、产品边界在哪，以及为什么我会把它收敛成“会话连续性”这条主路径。 这一篇往后走一步，讲它的工程改造。 TermPilot 前期基本就是 Codex + vibecoding 的开发方式，功能先做出来，结构在开发过程中逐步成型，文档、脚本、协议边界也都有，但一直没有被系统化整理。 我平时主要做 Java 服务端开发，所以这次改造对我很有启发。它发生在一个个人端侧项目里，但文章里讨论的这类问题并不局限于端侧。只要开始让 agent 深度参与开发，开始用 vibecoding 的方式持续推进，入口不清晰、边界不稳定、验证难复跑这些工程问题就会很快暴露出来。这个判断放回已有的 Java 服务端仓库里，同样成立。 后来补看了 OpenAI 的 Harness engineering 之后，我回头整理了一轮 TermPilot，才意识到自己前面更关注单次任务怎么往下...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子">TermPilot：你的远程 vibe coding 搭子</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-03-21T02:10:00.000Z" title="Created 2026-03-21 02:10:00">2026-03-21</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.212Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">TermPilot：你的远程 vibe coding 搭子前言最近在家 vibe coding，家里那台电脑上经常开着 Claude Code、跑很长时间的脚本。人不能一直钉在显示器前：出门吃饭、躺一会儿、临时走开，我还想盯着这条终端的输出，确认没卡死、继续下发下一条指令，偶尔敲一条命令或干净地停掉。 目前市面上有一些类似的小玩意，但深入研究使用后，发现他们都不符合我的 taste。例如 Happy，在 GitHub 上有 1w+ star，但是体验太差，自部署太重，还需要额外下载一个 app。 我的需求很简单：  使用简单：最好能一行命令直接启动，同时在手机上监控终端时，我也不希望去下载一个额外的 app 支持自部署：要能够部署在我个人的云服务器上，而且部署简单，最好一行命令就能搞定，不要引入太多依赖 数据安全：数据需要存在端侧，且要有端到端加密  基于这个需求，我业余时间 vibe coding 了一个能帮我实现这种需求的小工具，并且给它取了个名字 TermPilot。  架构设计TermPilot 分三层跑。 relay 部署在公网 VPS 上，充当中转站。它做的事不多：H...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践">GitHub Profile 自动同步实践</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-03-07T18:10:00.000Z" title="Created 2026-03-07 18:10:00">2026-03-07</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.144Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">GitHub Profile 自动同步实践 本文由 AI 参与创作  前言最近我把 GitHub Profile 做了一轮比较彻底的整理，目标不是“好看”，而是“真实、可维护、可自动更新”。 我之前的 Profile 有几个典型问题：  项目描述和仓库现状有偏差。 统计图依赖第三方外链，偶发加载失败。 内容更新靠手工维护，时间久了肯定过期。  这篇文章把这次改造的完整方案记录下来，后续我也会持续基于这个方案做迭代。 这次改造我做了什么围绕 github-profile 仓库，这次我实际完成了这些工作：  基于 GitHub API 拉取真实仓库信息（非 fork、活跃时间、stars&#x2F;forks、主语言），重写了 Profile 的项目展示。 新增双语 Profile（README.md + README.zh-CN.md）。 新增自动同步脚本：scripts/sync_profile_readme.py。 新增 GitHub Actions：.github/workflows/sync-profile.yml，支持手动触发 + 定时触发。 增加 AI 声明：明确标注 ...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2025/12/14/ADK-Java-SDK-%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A8%A1%E5%9E%8B%E6%9C%8D%E5%8A%A1/" title="ADK-Java-SDK 自定义模型服务">ADK-Java-SDK 自定义模型服务</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2025-12-14T05:19:10.000Z" title="Created 2025-12-14 05:19:10">2025-12-14</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.142Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">ADK-Java-SDK 自定义模型服务 本文由 AI 参与创作  最近在做 Agent 构建相关的工作，而在 Agent 构建这个领域，Google 的 ADK 算是业界标杆之一。最近在学习 ADK 过程中发现，ADK 的 Python SDK 提供了 LiteLLM 快速接入第三方供应商的模型参考： https://adk.wiki/agents/models/#using-open-local-models-via-litellm ，但是 Java SDK 并未提供这样快速接入的能力，于是记录下我在 ADK Java SDK 中 proxy 第三方供应商模型的例子，以供参考。 ADK Java SDK 模型扩展机制ADK Java SDK 通过 BaseLlm 抽象类提供了模型扩展能力。要接入第三方模型服务商，只需继承该类并实现核心方法即可。 BaseLlm 核心接口12345678910public abstract class BaseLlm &#123;    // 模型名称    protected final String model;        // 核心方...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2025/06/02/%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%8D%E5%85%BC%E5%AE%B9OpenAI%E8%A7%84%E8%8C%83%E7%9A%84%E5%A4%A7%E6%A8%A1%E5%9E%8BAPI%E5%B0%81%E8%A3%85%E4%B8%BASpringAI%20API--%E4%BB%A5DashScope%E4%B8%BA%E4%BE%8B/" title="如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例">如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2025-06-02T18:03:33.000Z" title="Created 2025-06-02 18:03:33">2025-06-02</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.221Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">如何将不兼容OpenAI规范的大模型API封装为SpringAI API–以DashScope为例 引言: 在实际开发中，我们经常需要调用不同的大模型 API，而 Spring AI 提供了统一接口来简化这一过程。然而，Spring AI 并未直接支持所有模型提供方（如百炼 DashScope）。本文通过实现 ChatModel 接口，演示如何将任意大模型 API（以百炼为例）封装为 Spring AI 可用的模型，从而实现灵活切换和功能扩展。   最近项目开发中经常用到 Spring AI，作为 Spring 全家桶的一员，它为 AI 生态封装了一套统一、易用的 API 规范，可以很方便地实现工具调用等特性。 同时 Spring AI 适配了一些模型提供方的 API，你可以在 spring application 配置文件中配置 url + api key 做到开箱即用。 但是美中不足的是，Spring AI 适配的模型提供方有限，目前支持的列表可以看官方文档：https://docs.spring.io/spring-ai/reference/api/chat/compari...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2025/03/23/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" title="大模型学习笔记">大模型学习笔记</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2025-03-23T03:27:03.000Z" title="Created 2025-03-23 03:27:03">2025-03-23</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.221Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">LLM学习笔记Embeddinghttps://www.julyedu.com/question/big/kp_id/30/ques_id/2968 https://projector.tensorflow.org/ 在人工智能领域，Embedding（嵌入）是一种将离散对象（如单词、类别、图像等）转换为连续向量表示的技术。这些向量会在低维空间中，并且能够体现出对象之间的语义关系。Embedding 本质上是一种映射，把高维空间中稀疏、离散的数据点映射到低维的连续向量空间。在这个新的空间里，相似的对象在空间中的距离会更近，不同的对象距离则更远。 文本中的每个单词会用独热编码（One-Hot Encoding）表示。不过，这种编码方式会导致向量维度非常高且稀疏。而词嵌入会把每个单词映射到一个低维的连续向量，例如 100 维或者 300 维。这些向量是通过神经网络训练得到的，训练目标是让在语义上相近的单词在向量空间中的距离也相近。 </div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2025/03/21/MCP%E6%B7%B1%E5%BA%A6%E8%A7%A3%E6%9E%90/" title="MCP深度解析">MCP深度解析</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2025-03-21T02:25:33.000Z" title="Created 2025-03-21 02:25:33">2025-03-21</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.144Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">MCP深度解析前言MCP </div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2025/01/06/%E8%99%9A%E6%8B%9F%E7%BA%BF%E7%A8%8B%EF%BC%88%E6%9C%89%E6%A0%88%E5%8D%8F%E7%A8%8B%EF%BC%89%E5%AF%B9%E4%BA%8EJava%E7%9A%84%E6%84%8F%E4%B9%89/" title="虚拟线程（有栈协程）对于Java的意义">虚拟线程（有栈协程）对于Java的意义</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2025-01-06T22:10:52.000Z" title="Created 2025-01-06 22:10:52">2025-01-06</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.236Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">虚拟线程（有栈协程）对于Java的意义1.传统同步线程模型在传统的 servlet 生态中，线程模型一般是 thread per request，即每个请求分配一个线程，这个线程负责整个请求的生命周期。 有个很直观的理解：ThreadLocal–在一次请求过程中，可以在请求上游往 ThreadLocal set 一些数据，比如可以存 userId、trace 等；在请求下游时直接调用 threadLocal.get() 即可获取。  在这种线程模型中，想要承载更多请求，就需要添加更多线程。更多的线程意味着带来更多的资源占用：  一个 Java 线程的线程栈大小通常为 1MB，这意味着如果需要同时处理 1000 个并发连接，光线程栈的内存占用就有 1000 MB。  Java 平台线程本质上是由 JVM 映射到操作系统的内核线程，如果并发请求数量增多，内核线程就需要同样增加。  每个内核线程需要由操作系统分配线程控制块， 过多的内核线程会导致频繁的线程上下文切换，如果存在阻塞的 IO 操作，就会导致大量内核线程被阻塞    2.异步&amp;响应式线程模型为了避免创建和阻塞过多的内...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2024/09/29/OSPP%E5%8F%82%E4%B8%8E%E8%AE%B0%E5%BD%95/" title="OSPP参与记录">OSPP参与记录</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2024-09-29T15:58:07.000Z" title="Created 2024-09-29 15:58:07">2024-09-29</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.188Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">前言今年毕业前申请参与了2024年的开源之夏（OSPP），是一次很宝贵的开源项目经验，最终成功结项。写这篇博客以此记录留存。 本博客记录的内容截至日期为 2024:09:30，最终方案相比本文有变动，例如放弃 jprotobuf 方案、重构 Grpc 调用模块等。具体详见：https://github.com/alibaba/arthas/pull/2914  项目申请书项目名称：探索 Java 低资源消耗的 gRPC 实现  项目主导师：断岭  申请人：风业  日期：2024.06.03  邮箱：1129126684@qq.com   项目背景Arthas 是一个 Java 诊断工具，它允许开发人员在无需修改应用程序代码的情况下，动态地监视和解决生产环境中 Java 应用程序的问题。目前 Arthas 主要是通过交互式的命令行提供服务，此外也提供了 http api。但是 http api 比较简陋，预期通过grpc server提供服务。但是官方的 grpc 实现依赖多、运行时内存占用高，本项目旨在提供一种低资源消耗的 grpc 实现，需要支持 stream 并尽量减少外部依...</div></div></div><div class="recent-post-item"><div class="recent-post-info no-cover"><a class="article-title" href="/2023/04/28/%E9%83%A8%E7%BD%B2Grafana-Prometheus-Exporter/" title="部署Grafana+Prometheus+Exporter">部署Grafana+Prometheus+Exporter</a><div class="article-meta-wrap"><span class="post-meta-date"><i class="far fa-calendar-alt"></i><span class="article-meta-label">Created</span><time class="post-meta-date-created" datetime="2023-04-28T15:50:12.000Z" title="Created 2023-04-28 15:50:12">2023-04-28</time><span class="article-meta-separator">|</span><i class="fas fa-history"></i><span class="article-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.241Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="content">Grafana1docker run -d --name=grafana --network host grafana/grafana-enterprise  Prometheus下载并解压 123wget https://github.com/prometheus/prometheus/releases/download/v2.42.0/prometheus-2.42.0.linux-amd64.tar.gztar xvfz prometheus-*.tar.gz  给 prometheus 配置 systemd 启动，默认运行端口为 9090 12345678910111213141516171819202122vim /usr/lib/systemd/system/prometheus.service[Unit]Description=prometheus[Service]WorkingDirectory=/home/fengye/prometheus/prometheus-2.42.0.linux-amd64# 工作目录ExecStart=/home/fengye/pro...</div></div></div></div><nav id="pagination"><div class="pagination"><span class="page-number current">1</span><a class="page-number" href="/page/2/#content-inner">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/4/#content-inner">4</a><a class="extend next" rel="next" href="/page/2/#content-inner"><i class="fas fa-chevron-right fa-fw"></i></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">风业</div><div class="author-info-description">fengye's blog</div><div class="site-data"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">35</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fengye404"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>Announcement</span></div><div class="announcement_content">my new hexo blog</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Posts</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><time datetime="2026-03-22T04:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子">TermPilot：你的远程 vibe coding 搭子</a><time datetime="2026-03-21T02:10:00.000Z" title="Created 2026-03-21 02:10:00">2026-03-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践">GitHub Profile 自动同步实践</a><time datetime="2026-03-07T18:10:00.000Z" title="Created 2026-03-07 18:10:00">2026-03-07</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/12/14/ADK-Java-SDK-%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A8%A1%E5%9E%8B%E6%9C%8D%E5%8A%A1/" title="ADK-Java-SDK 自定义模型服务">ADK-Java-SDK 自定义模型服务</a><time datetime="2025-12-14T05:19:10.000Z" title="Created 2025-12-14 05:19:10">2025-12-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/06/02/%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%8D%E5%85%BC%E5%AE%B9OpenAI%E8%A7%84%E8%8C%83%E7%9A%84%E5%A4%A7%E6%A8%A1%E5%9E%8BAPI%E5%B0%81%E8%A3%85%E4%B8%BASpringAI%20API--%E4%BB%A5DashScope%E4%B8%BA%E4%BE%8B/" title="如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例">如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例</a><time datetime="2025-06-02T18:03:33.000Z" title="Created 2025-06-02 18:03:33">2025-06-02</time></div></div></div></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>Tags</span></div><div class="card-tag-cloud"><a href="/tags/OpenAI/" style="font-size: 1.1em; color: #999">OpenAI</a> <a href="/tags/GitHub-Actions/" style="font-size: 1.1em; color: #999">GitHub Actions</a> <a href="/tags/GitHub/" style="font-size: 1.1em; color: #999">GitHub</a> <a href="/tags/%E8%87%AA%E5%8A%A8%E5%8C%96/" style="font-size: 1.1em; color: #999">自动化</a> <a href="/tags/AI/" style="font-size: 1.5em; color: #99a9bf">AI</a> <a href="/tags/%E5%B7%A5%E7%A8%8B%E5%8C%96/" style="font-size: 1.3em; color: #99a1ac">工程化</a> <a href="/tags/%E8%BD%AF%E4%BB%B6%E6%9E%B6%E6%9E%84/" style="font-size: 1.1em; color: #999">软件架构</a> <a href="/tags/Agent/" style="font-size: 1.3em; color: #99a1ac">Agent</a></div></div><div class="card-widget card-archives">
+    <div class="item-headline">
+      <i class="fas fa-archive"></i>
+      <span>Archives</span>
+      <a class="card-more-btn" href="/archives/"
+            title="View More">
+            <i class="fas fa-angle-right"></i>
+          </a>
+    </div>
+  
+    <ul class="card-archive-list">
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2026/03/">
+            <span class="card-archive-list-date">
+              March 2026
+            </span>
+            <span class="card-archive-list-count">3</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/12/">
+            <span class="card-archive-list-date">
+              December 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/06/">
+            <span class="card-archive-list-date">
+              June 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/03/">
+            <span class="card-archive-list-date">
+              March 2025
+            </span>
+            <span class="card-archive-list-count">2</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2025/01/">
+            <span class="card-archive-list-date">
+              January 2025
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2024/09/">
+            <span class="card-archive-list-date">
+              September 2024
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2023/04/">
+            <span class="card-archive-list-date">
+              April 2023
+            </span>
+            <span class="card-archive-list-count">1</span>
+          </a>
+        </li>
+      
+        <li class="card-archive-list-item">
+          <a class="card-archive-list-link" href="/archives/2023/01/">
+            <span class="card-archive-list-date">
+              January 2023
+            </span>
+            <span class="card-archive-list-count">4</span>
+          </a>
+        </li>
+      
+    </ul>
+  </div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>Website Info</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">Article Count :</div><div class="item-count">35</div></div><div class="webinfo-item"><div class="item-name">Runtime :</div><div class="item-count" id="runtimeshow" data-publishDate="2024-12-31T00:00:00.000Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">Total Word Count :</div><div class="item-count">159.8k</div></div><div class="webinfo-item"><div class="item-name">Unique Visitors :</div><div class="item-count" id="busuanzi_value_site_uv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">Page Views :</div><div class="item-count" id="busuanzi_value_site_pv"><i class="fa-solid fa-spinner fa-spin"></i></div></div><div class="webinfo-item"><div class="item-name">Last Update :</div><div class="item-count" id="last-push-date" data-lastPushDate="2026-04-12T11:12:45.928Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2024 - 2026 By 风业</span><span class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="Toggle Between Light and Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle Between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Settings"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="Back to Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  Loading Database</span></div><div class="local-search-input"><input placeholder="Search for Posts" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

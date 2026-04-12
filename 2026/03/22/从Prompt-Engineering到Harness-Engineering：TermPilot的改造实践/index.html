@@ -1,0 +1,355 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践 | fengye's blog</title><meta name="author" content="风业"><meta name="copyright" content="风业"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践 本文由 AI 参与创作  前言上一篇文章我先把 TermPilot 这个项目本身讲了一遍，重点是它解决什么问题、产品边界在哪，以及为什么我会把它收敛成“会话连续性”这条主路径。 这一篇往后走一步，讲它的工程改造。 TermPilot 前期基本就是 Codex + vibecodin">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">
+<meta property="og:url" content="https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/index.html">
+<meta property="og:site_name" content="fengye&#39;s blog">
+<meta property="og:description" content="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践 本文由 AI 参与创作  前言上一篇文章我先把 TermPilot 这个项目本身讲了一遍，重点是它解决什么问题、产品边界在哪，以及为什么我会把它收敛成“会话连续性”这条主路径。 这一篇往后走一步，讲它的工程改造。 TermPilot 前期基本就是 Codex + vibecodin">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640">
+<meta property="article:published_time" content="2026-03-22T04:20:16.000Z">
+<meta property="article:modified_time" content="2026-04-12T11:12:00.218Z">
+<meta property="article:author" content="风业">
+<meta property="article:tag" content="AI">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="工程化">
+<meta property="article:tag" content="OpenAI">
+<meta property="article:tag" content="软件架构">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践",
+  "url": "https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/",
+  "image": "https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640",
+  "datePublished": "2026-03-22T04:20:16.000Z",
+  "dateModified": "2026-04-12T11:12:00.218Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "风业",
+      "url": "https://fengye404.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"No results found for: ${query}","hits_stats":"${hits} articles found"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Failed',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: 'days',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><script>window.paceOptions = {
+  restartOnPushState: false
+}
+
+btf.addGlobalFn('pjaxSend', () => {
+  Pace.restart()
+}, 'pace_restart')
+
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js/themes/blue/pace-theme-minimal.min.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div class="bg-animation" id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">35</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">fengye's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  Back to Home</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> Search</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-03-22T04:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.218Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">Word Count:</span><span class="word-count">3.3k</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post Views:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><div id="post-outdate-notice" data="{&quot;limitDay&quot;:720,&quot;messagePrev&quot;:&quot;It has been&quot;,&quot;messageNext&quot;:&quot;days since the last update, the content of the article may be outdated.&quot;,&quot;postUpdate&quot;:&quot;2026-04-12 11:12:00&quot;}" hidden></div><h1 id="从-Prompt-Engineering-到-Harness-Engineering：TermPilot-的改造实践"><a href="#从-Prompt-Engineering-到-Harness-Engineering：TermPilot-的改造实践" class="headerlink" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践"></a>从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</h1><blockquote>
+<p>本文由 AI 参与创作</p>
+</blockquote>
+<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>上一篇文章我先把 <a href="https://fengye404.top/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/"><code>TermPilot</code></a> 这个项目本身讲了一遍，重点是它解决什么问题、产品边界在哪，以及为什么我会把它收敛成“会话连续性”这条主路径。</p>
+<p>这一篇往后走一步，讲它的工程改造。</p>
+<p><code>TermPilot</code> 前期基本就是 <code>Codex + vibecoding</code> 的开发方式，功能先做出来，结构在开发过程中逐步成型，文档、脚本、协议边界也都有，但一直没有被系统化整理。</p>
+<p>我平时主要做 <code>Java</code> 服务端开发，所以这次改造对我很有启发。它发生在一个个人端侧项目里，但文章里讨论的这类问题并不局限于端侧。只要开始让 agent 深度参与开发，开始用 <code>vibecoding</code> 的方式持续推进，入口不清晰、边界不稳定、验证难复跑这些工程问题就会很快暴露出来。这个判断放回已有的 <code>Java</code> 服务端仓库里，同样成立。</p>
+<p>后来补看了 OpenAI 的 <a target="_blank" rel="noopener" href="https://openai.com/zh-Hans-CN/index/harness-engineering/">Harness engineering</a> 之后，我回头整理了一轮 <code>TermPilot</code>，才意识到自己前面更关注单次任务怎么往下推进，对工程环境本身关注得不够。</p>
+<p>这篇文章真正想讲的是：当 agent 开始持续参与开发之后，工程系统本身要发生什么变化。对我来说，harness engineering 讲的就是这一层，讲的是仓库怎样组织入口，约束怎样落成规则，验证怎样形成反馈回路。</p>
+<h2 id="1-先说结论：harness-engineering-解决的是什么问题"><a href="#1-先说结论：harness-engineering-解决的是什么问题" class="headerlink" title="1. 先说结论：harness engineering 解决的是什么问题"></a>1. 先说结论：harness engineering 解决的是什么问题</h2><p>对已有工程来说，harness engineering 主要解决三类问题：</p>
+<ol>
+<li>agent 进入仓库后不知道先看什么，靠聊天补上下文。</li>
+<li>架构边界只写在文档里，违反了也没有反馈。</li>
+<li>验证依赖作者本机环境，agent 和 CI 复跑不了。</li>
+</ol>
+<p><code>TermPilot</code> 改造前基本就是这个状态。项目能继续往前走，但很依赖我自己一直在线。很多上下文存在聊天记录里，很多判断标准存在脑子里，很多验证能力存在本机环境里。</p>
+<p>这也是 prompt engineering 的天然边界。prompt 可以提升 agent 的单次输出质量，但解决不了工程系统本身的信息分布问题。仓库入口不清晰、边界没有约束、验证无法复跑时，prompt 再精细，也只能缓解问题，不能消除问题。</p>
+<p>因此，harness engineering 的重点很明确：把原来依赖人脑维护的那部分工程信息，逐步转成仓库内部可读取、可验证、可反馈的系统能力。</p>
+<h2 id="2-我在-TermPilot-里做了哪些改动"><a href="#2-我在-TermPilot-里做了哪些改动" class="headerlink" title="2. 我在 TermPilot 里做了哪些改动"></a>2. 我在 TermPilot 里做了哪些改动</h2><h3 id="2-1-先把入口补齐"><a href="#2-1-先把入口补齐" class="headerlink" title="2.1 先把入口补齐"></a>2.1 先把入口补齐</h3><p>第一步是固定 agent 进入仓库的路径。</p>
+<p>我在仓库根目录加了 <code>AGENTS.md</code>、<code>ARCHITECTURE.md</code>、<code>PLANS.md</code>，同时把内部工程知识收进 <code>.agent/</code>：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">AGENTS.md</span><br><span class="line">ARCHITECTURE.md</span><br><span class="line">PLANS.md</span><br><span class="line">.agent/</span><br><span class="line">  index.md</span><br><span class="line">  core-beliefs.md</span><br><span class="line">  runtime-boundaries.md</span><br><span class="line">  known-invariants.md</span><br><span class="line">  verification.md</span><br><span class="line">  tech-debt-tracker.md</span><br><span class="line">  exec-plans/</span><br></pre></td></tr></table></figure>
+
+<p>这几类文件的职责是分开的：</p>
+<ul>
+<li><code>AGENTS.md</code> 只做入口，不写成长手册。</li>
+<li><code>ARCHITECTURE.md</code> 负责顶层结构和运行时关系。</li>
+<li><code>PLANS.md</code> 规定复杂任务先写计划。</li>
+<li><code>.agent/</code> 负责长期沉淀内部知识。</li>
+</ul>
+<p>这里最重要的点只有一个：<code>AGENTS.md</code> 不能写成百科全书。它的职责不是把所有知识塞进一个文件，而是告诉 agent 先读什么、后读什么、复杂任务要不要先落 plan。入口清晰，后面的约束和验证才有意义。</p>
+<h3 id="2-2-把散落的原则收成内部真相"><a href="#2-2-把散落的原则收成内部真相" class="headerlink" title="2.2 把散落的原则收成内部真相"></a>2.2 把散落的原则收成内部真相</h3><p><code>TermPilot</code> 原来就有一些稳定的设计约束，只是没有集中表达。没有被集中表达的原则，本质上就还不是原则，只能算经验。</p>
+<p>这次我把几条关键原则单独沉淀了下来：</p>
+<ul>
+<li>session 的 source of truth 在 <code>agent</code></li>
+<li><code>relay</code> 只保存 pairing、grant、audit 这类元数据</li>
+<li>跨 runtime 共享结构统一走 <code>@termpilot/protocol</code></li>
+<li><code>shell</code> 和 <code>command</code> session 的退出语义分开处理</li>
+</ul>
+<p>这些内容后来分别落到了 <code>AGENTS.md</code> 和 <code>.agent/*.md</code> 里。这样做的目的很直接：让 agent 在改代码前先拿到一组稳定约束，而不是在改完之后再靠人去纠偏。</p>
+<p>这一步看起来像在写文档，实质上是在定义系统边界。边界一旦没有被显式表达，agent 就只能按局部合理性继续生长，最后很容易把仓库带回到“每次改动都能讲通，但整体越来越乱”的状态。</p>
+<h3 id="2-3-复杂任务先落-plan"><a href="#2-3-复杂任务先落-plan" class="headerlink" title="2.3 复杂任务先落 plan"></a>2.3 复杂任务先落 plan</h3><p>跨模块、跨 runtime、行为有歧义的任务，我现在都会先写到 <code>.agent/exec-plans/</code> 里。</p>
+<p>这一步解决的是“为什么这么改”。</p>
+<p>很多复杂需求在聊天里已经分析得很清楚了，但对话结束之后，这些背景信息就跟着消失了。下一次再接手，只能重新补上下文，或者直接猜。plan 的价值就在这里：把目标、非目标、验收标准、风险、涉及模块和决策依据留在仓库里，让后续接手的人和 agent 都能看到。</p>
+<p>对于 agent 来说，看不到的知识等于不存在。执行计划一旦进入版本控制，仓库才开始具备持续交接能力。</p>
+<h3 id="2-4-把文档约束变成检查器"><a href="#2-4-把文档约束变成检查器" class="headerlink" title="2.4 把文档约束变成检查器"></a>2.4 把文档约束变成检查器</h3><p>只有文档，没有检查器，边界很快就会失效。因为文档只能描述规则，检查器才能执行规则。</p>
+<p>所以我在 <code>TermPilot</code> 里补了一类结构检查，专门检查几个关键约束。在这个项目里，对应的入口是 <code>check:architecture</code>：</p>
+<ul>
+<li><code>app</code> 不能直接 import <code>agent</code>、<code>relay</code> 源码</li>
+<li>跨 runtime 共享类型必须经过 <code>@termpilot/protocol</code></li>
+<li>根 CLI 只做顶层组装</li>
+<li>未分类的 repo import 默认不放行</li>
+</ul>
+<p>对应脚本入口很简单：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;scripts&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;check:architecture&quot;</span><span class="punctuation">:</span> <span class="string">&quot;node scripts/check-architecture.mjs&quot;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>这种检查不需要一开始就做得很重。已有工程里，先把最关键的 20% 结构约束机械化，收益就很明显。因为从这一刻开始，边界不再依赖“记得遵守”，而是变成了“违反就会报错”。</p>
+<h3 id="2-5-把验证整理成仓库内可直接运行的入口"><a href="#2-5-把验证整理成仓库内可直接运行的入口" class="headerlink" title="2.5 把验证整理成仓库内可直接运行的入口"></a>2.5 把验证整理成仓库内可直接运行的入口</h3><p>这一步对已有工程特别重要。</p>
+<p><code>TermPilot</code> 早期有一些验证脚本是“我机器上能跑”，但仓库本身表达不完整。后面我把这些入口统一收成了仓库里的标准脚本：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;scripts&quot;</span><span class="punctuation">:</span> <span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;verify:fast&quot;</span><span class="punctuation">:</span> <span class="string">&quot;pnpm typecheck &amp;&amp; pnpm check:architecture &amp;&amp; pnpm check:repo-docs &amp;&amp; pnpm check:public-docs&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;verify:full&quot;</span><span class="punctuation">:</span> <span class="string">&quot;pnpm verify:fast &amp;&amp; pnpm build &amp;&amp; pnpm docs:build &amp;&amp; pnpm test:relay-storage:built &amp;&amp; pnpm test:app-versioning:built &amp;&amp; pnpm test:isolation:built&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;verify:browser&quot;</span><span class="punctuation">:</span> <span class="string">&quot;pnpm build &amp;&amp; pnpm test:ui-smoke:built&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;verify:e2ee&quot;</span><span class="punctuation">:</span> <span class="string">&quot;pnpm build &amp;&amp; pnpm test:e2ee:built&quot;</span></span><br><span class="line">  <span class="punctuation">&#125;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>这里要强调的不是这些脚本名本身，而是背后的思路：把原来依赖个人环境的界面检查、端到端检查和兼容入口，全部收敛到仓库自己的验证路径里。这样 agent 能跑，CI 能跑，其他协作者也能跑，验证能力不再附着在某一台开发机器上。</p>
+<p>这一步也是已有工程最容易忽略的地方。很多项目并不是没有验证，而是验证能力没有被仓库完整表达出来。对于 agent 来说，这两者几乎没有区别。</p>
+<h3 id="2-6-文档同步也进入检查"><a href="#2-6-文档同步也进入检查" class="headerlink" title="2.6 文档同步也进入检查"></a>2.6 文档同步也进入检查</h3><p>只检查代码，不检查文档，很容易把仓库重新带回混乱状态。因为知识漂移本身也是一种工程错误。</p>
+<p>所以我加了两类文档检查。在 <code>TermPilot</code> 里，对应的是下面两个入口：</p>
+<ul>
+<li><code>check:repo-docs</code>：检查内部文档体系是否完整</li>
+<li><code>check:public-docs</code>：根据 <code>.agent/public-doc-map.json</code> 检查实现改动是否同步更新了对应文档</li>
+</ul>
+<p>这个动作不复杂，但很有用。它至少能挡住一类很常见的问题：实现已经变了，文档还停在旧状态。</p>
+<p>对 agent 工程来说，文档不是装饰物，而是运行时上下文的一部分。如果实现和文档长期漂移，agent 读到的仓库就是一个自相矛盾的系统。</p>
+<h3 id="2-7-最后接到-CI"><a href="#2-7-最后接到-CI" class="headerlink" title="2.7 最后接到 CI"></a>2.7 最后接到 CI</h3><p>规则只写在文档里不够，最终还是要接到 CI。</p>
+<p><code>TermPilot</code> 现在的 PR 级 CI 会跑：</p>
+<ul>
+<li><code>verify:fast</code></li>
+<li>build</li>
+<li>docs build</li>
+<li>runtime checks</li>
+<li>独立的 <code>ui-smoke</code> job</li>
+</ul>
+<p>这样 agent 改完代码之后，仓库本地能跑一遍，CI 还能再复跑一遍。到这一步，入口、约束、验证和反馈才真正闭环。</p>
+<h2 id="3-这套改动带来的变化"><a href="#3-这套改动带来的变化" class="headerlink" title="3. 这套改动带来的变化"></a>3. 这套改动带来的变化</h2><p>这轮改造做完之后，开发方式变得很明显。</p>
+<p>以前更像是：我把上下文讲清楚，agent 继续往下写，偏了再纠偏。<br>现在更像是：agent 先按入口读仓库，再看计划和约束，改完跑对应验证，最后交给 CI 收口。</p>
+<p>前后差别主要有三点：</p>
+<ol>
+<li>复杂任务的上下文不再只存在聊天记录里。</li>
+<li>架构边界开始有机械反馈，不再只靠“记得遵守”。</li>
+<li>验证能力从“作者本机能力”变成了“仓库能力”。</li>
+</ol>
+<p>对我来说，这也是这轮改造最核心的收获。harness engineering 不是多写几篇文档，而是把仓库从“存放代码的地方”往“约束 agent 工作方式的系统”推进了一步。脚本、检查器、CI 都只是落地形式，核心仍然是工程系统的组织方式。</p>
+<p>换句话说，prompt engineering 关注的是“怎么把一次任务说清楚”，harness engineering 关注的是“怎么让一个项目长期可接手、可验证、可收敛”。当 agent 开始持续参与开发时，后者才是决定上限的那部分能力。</p>
+<h2 id="4-如果你也要改一个已有工程"><a href="#4-如果你也要改一个已有工程" class="headerlink" title="4. 如果你也要改一个已有工程"></a>4. 如果你也要改一个已有工程</h2><p>如果你手里也有一个已有工程，我建议按下面这个顺序推进：</p>
+<ol>
+<li>先固定 agent 进入仓库的入口</li>
+<li>把内部工程知识和对外文档分层</li>
+<li>收敛几条最关键的设计约束</li>
+<li>给复杂改动补计划和决策记录</li>
+<li>先做最小可用的结构检查</li>
+<li>把常用验证整理成仓库内统一入口</li>
+<li>最后再补文档联动检查和自动化回路</li>
+</ol>
+<p>不要一开始就追求“大而全”。已有工程里最有效的做法，通常是先把最容易漂移、最容易误解、最容易被 agent 误判的那部分规则固定下来。</p>
+<p>这里有一个判断标准很实用：如果某条规则一旦被打破，就会让后续改动持续变贵，那它就值得优先机械化。通常这类规则不是业务细节，而是入口、边界、验证和交接。</p>
+<p>如果把这个思路放回我更熟悉的 <code>Java</code> 服务端场景，落点其实也很集中：先把模块和分层边界说清楚，再固定本地运行、联调和回归入口，然后把事务、幂等、缓存一致性、消息语义、接口兼容性这类关键约束显式化，最后把单测、集成测试、契约检查、迁移校验这些关键路径沉淀成仓库内可直接运行的验证。</p>
+<p>对服务端开发来说，harness engineering 带来的启发也很直接：不要只想着“怎么让 agent 帮我写一个 controller 或 service”，而是先把这个服务端工程整理成 agent 能进入、能判断、能验证的系统。只有这样，后面的 vibecoding 才会越来越稳，而不是越写越乱。</p>
+<h2 id="5-附：TermPilot"><a href="#5-附：TermPilot" class="headerlink" title="5. 附：TermPilot"></a>5. 附：TermPilot</h2><p>上面这套改造，落地对象就是 <code>TermPilot</code>。这里补一个更具体的使用场景和启动方式。</p>
+<p>这类场景在日常开发里很常见，比如：</p>
+<ul>
+<li>你在电脑上跑 <code>Claude Code</code></li>
+<li>或者跑部署脚本、数据库迁移、长时间批处理</li>
+<li>人离开工位后，用手机继续看会话状态</li>
+</ul>
+<p>如果你想快速试一下，可以按下面的顺序启动：</p>
+<ol>
+<li>在一台手机可访问的机器上启动 <code>termpilot relay</code></li>
+<li>在自己的电脑上启动 <code>termpilot agent</code></li>
+<li>用手机浏览器打开 relay 地址，输入配对码</li>
+<li>在电脑上执行 <code>termpilot claude code</code>，或者 <code>termpilot run -- &lt;command&gt;</code></li>
+<li>然后在手机上继续看同一条会话</li>
+</ol>
+<p>下面这张图就是我实际跑起来的一次使用场景。电脑上已经有一条 <code>deploy-prod-demo</code> 会话在跑，手机端接入后可以继续看输出，也可以补命令和做快捷控制。</p>
+<p><img src="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/termpilot-mobile-demo.png" alt="TermPilot 移动端页面截图" loading='lazy'></p>
+<p>如果你想直接看项目本身：</p>
+<ul>
+<li>文档站：<a href="https://fengye404.top/TermPilot/">https://fengye404.top/TermPilot/</a></li>
+<li>GitHub：<a target="_blank" rel="noopener" href="https://github.com/fengye404/TermPilot">https://github.com/fengye404/TermPilot</a></li>
+</ul>
+<p>欢迎试用，也欢迎点个 Star。有问题或者想法，可以直接提 Issue。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="https://fengye404.top">风业</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="https://fengye404.top/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/">https://fengye404.top/2026/03/22/从Prompt-Engineering到Harness-Engineering：TermPilot的改造实践/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles on this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless otherwise stated.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/AI/">AI</a><a class="post-meta__tags" href="/tags/Agent/">Agent</a><a class="post-meta__tags" href="/tags/%E5%B7%A5%E7%A8%8B%E5%8C%96/">工程化</a><a class="post-meta__tags" href="/tags/OpenAI/">OpenAI</a><a class="post-meta__tags" href="/tags/%E8%BD%AF%E4%BB%B6%E6%9E%B6%E6%9E%84/">软件架构</a></div><div class="post-share"><div class="social-share" data-image="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" data-sites="x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">Next</div><div class="info-item-2">TermPilot：你的远程 vibe coding 搭子</div></div><div class="info-2"><div class="info-item-1">TermPilot：你的远程 vibe coding 搭子前言最近在家 vibe coding，家里那台电脑上经常开着 Claude Code、跑很长时间的脚本。人不能一直钉在显示器前：出门吃饭、躺一会儿、临时走开，我还想盯着这条终端的输出，确认没卡死、继续下发下一条指令，偶尔敲一条命令或干净地停掉。 目前市面上有一些类似的小玩意，但深入研究使用后，发现他们都不符合我的 taste。例如 Happy，在 GitHub 上有 1w+ star，但是体验太差，自部署太重，还需要额外下载一个 app。 我的需求很简单：  使用简单：最好能一行命令直接启动，同时在手机上监控终端时，我也不希望去下载一个额外的 app 支持自部署：要能够部署在我个人的云服务器上，而且部署简单，最好一行命令就能搞定，不要引入太多依赖 数据安全：数据需要存在端侧，且要有端到端加密  基于这个需求，我业余时间 vibe coding 了一个能帮我实现这种需求的小工具，并且给它取了个名字 TermPilot。  架构设计TermPilot 分三层跑。 relay 部署在公网 VPS 上，充当中转站。它做的事不多：H...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>Related Articles</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-21</div><div class="info-item-2">TermPilot：你的远程 vibe coding 搭子</div></div><div class="info-2"><div class="info-item-1">TermPilot：你的远程 vibe coding 搭子前言最近在家 vibe coding，家里那台电脑上经常开着 Claude Code、跑很长时间的脚本。人不能一直钉在显示器前：出门吃饭、躺一会儿、临时走开，我还想盯着这条终端的输出，确认没卡死、继续下发下一条指令，偶尔敲一条命令或干净地停掉。 目前市面上有一些类似的小玩意，但深入研究使用后，发现他们都不符合我的 taste。例如 Happy，在 GitHub 上有 1w+ star，但是体验太差，自部署太重，还需要额外下载一个 app。 我的需求很简单：  使用简单：最好能一行命令直接启动，同时在手机上监控终端时，我也不希望去下载一个额外的 app 支持自部署：要能够部署在我个人的云服务器上，而且部署简单，最好一行命令就能搞定，不要引入太多依赖 数据安全：数据需要存在端侧，且要有端到端加密  基于这个需求，我业余时间 vibe coding 了一个能帮我实现这种需求的小工具，并且给它取了个名字 TermPilot。  架构设计TermPilot 分三层跑。 relay 部署在公网 VPS 上，充当中转站。它做的事不多：H...</div></div></div></a><a class="pagination-related" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-03-07</div><div class="info-item-2">GitHub Profile 自动同步实践</div></div><div class="info-2"><div class="info-item-1">GitHub Profile 自动同步实践 本文由 AI 参与创作  前言最近我把 GitHub Profile 做了一轮比较彻底的整理，目标不是“好看”，而是“真实、可维护、可自动更新”。 我之前的 Profile 有几个典型问题：  项目描述和仓库现状有偏差。 统计图依赖第三方外链，偶发加载失败。 内容更新靠手工维护，时间久了肯定过期。  这篇文章把这次改造的完整方案记录下来，后续我也会持续基于这个方案做迭代。 这次改造我做了什么围绕 github-profile 仓库，这次我实际完成了这些工作：  基于 GitHub API 拉取真实仓库信息（非 fork、活跃时间、stars&#x2F;forks、主语言），重写了 Profile 的项目展示。 新增双语 Profile（README.md + README.zh-CN.md）。 新增自动同步脚本：scripts/sync_profile_readme.py。 新增 GitHub Actions：.github/workflows/sync-profile.yml，支持手动触发 + 定时触发。 增加 AI 声明：明确标注 ...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">风业</div><div class="author-info-description">fengye's blog</div><div class="site-data"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">35</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fengye404"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>Announcement</span></div><div class="announcement_content">my new hexo blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%8E-Prompt-Engineering-%E5%88%B0-Harness-Engineering%EF%BC%9ATermPilot-%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5"><span class="toc-number">1.</span> <span class="toc-text">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E5%85%88%E8%AF%B4%E7%BB%93%E8%AE%BA%EF%BC%9Aharness-engineering-%E8%A7%A3%E5%86%B3%E7%9A%84%E6%98%AF%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98"><span class="toc-number">1.2.</span> <span class="toc-text">1. 先说结论：harness engineering 解决的是什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E6%88%91%E5%9C%A8-TermPilot-%E9%87%8C%E5%81%9A%E4%BA%86%E5%93%AA%E4%BA%9B%E6%94%B9%E5%8A%A8"><span class="toc-number">1.3.</span> <span class="toc-text">2. 我在 TermPilot 里做了哪些改动</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E5%85%88%E6%8A%8A%E5%85%A5%E5%8F%A3%E8%A1%A5%E9%BD%90"><span class="toc-number">1.3.1.</span> <span class="toc-text">2.1 先把入口补齐</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E6%8A%8A%E6%95%A3%E8%90%BD%E7%9A%84%E5%8E%9F%E5%88%99%E6%94%B6%E6%88%90%E5%86%85%E9%83%A8%E7%9C%9F%E7%9B%B8"><span class="toc-number">1.3.2.</span> <span class="toc-text">2.2 把散落的原则收成内部真相</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E5%A4%8D%E6%9D%82%E4%BB%BB%E5%8A%A1%E5%85%88%E8%90%BD-plan"><span class="toc-number">1.3.3.</span> <span class="toc-text">2.3 复杂任务先落 plan</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E6%8A%8A%E6%96%87%E6%A1%A3%E7%BA%A6%E6%9D%9F%E5%8F%98%E6%88%90%E6%A3%80%E6%9F%A5%E5%99%A8"><span class="toc-number">1.3.4.</span> <span class="toc-text">2.4 把文档约束变成检查器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-5-%E6%8A%8A%E9%AA%8C%E8%AF%81%E6%95%B4%E7%90%86%E6%88%90%E4%BB%93%E5%BA%93%E5%86%85%E5%8F%AF%E7%9B%B4%E6%8E%A5%E8%BF%90%E8%A1%8C%E7%9A%84%E5%85%A5%E5%8F%A3"><span class="toc-number">1.3.5.</span> <span class="toc-text">2.5 把验证整理成仓库内可直接运行的入口</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-6-%E6%96%87%E6%A1%A3%E5%90%8C%E6%AD%A5%E4%B9%9F%E8%BF%9B%E5%85%A5%E6%A3%80%E6%9F%A5"><span class="toc-number">1.3.6.</span> <span class="toc-text">2.6 文档同步也进入检查</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-7-%E6%9C%80%E5%90%8E%E6%8E%A5%E5%88%B0-CI"><span class="toc-number">1.3.7.</span> <span class="toc-text">2.7 最后接到 CI</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E8%BF%99%E5%A5%97%E6%94%B9%E5%8A%A8%E5%B8%A6%E6%9D%A5%E7%9A%84%E5%8F%98%E5%8C%96"><span class="toc-number">1.4.</span> <span class="toc-text">3. 这套改动带来的变化</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%A6%82%E6%9E%9C%E4%BD%A0%E4%B9%9F%E8%A6%81%E6%94%B9%E4%B8%80%E4%B8%AA%E5%B7%B2%E6%9C%89%E5%B7%A5%E7%A8%8B"><span class="toc-number">1.5.</span> <span class="toc-text">4. 如果你也要改一个已有工程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E9%99%84%EF%BC%9ATermPilot"><span class="toc-number">1.6.</span> <span class="toc-text">5. 附：TermPilot</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Posts</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><time datetime="2026-03-22T04:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子">TermPilot：你的远程 vibe coding 搭子</a><time datetime="2026-03-21T02:10:00.000Z" title="Created 2026-03-21 02:10:00">2026-03-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践">GitHub Profile 自动同步实践</a><time datetime="2026-03-07T18:10:00.000Z" title="Created 2026-03-07 18:10:00">2026-03-07</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/12/14/ADK-Java-SDK-%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A8%A1%E5%9E%8B%E6%9C%8D%E5%8A%A1/" title="ADK-Java-SDK 自定义模型服务">ADK-Java-SDK 自定义模型服务</a><time datetime="2025-12-14T05:19:10.000Z" title="Created 2025-12-14 05:19:10">2025-12-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/06/02/%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%8D%E5%85%BC%E5%AE%B9OpenAI%E8%A7%84%E8%8C%83%E7%9A%84%E5%A4%A7%E6%A8%A1%E5%9E%8BAPI%E5%B0%81%E8%A3%85%E4%B8%BASpringAI%20API--%E4%BB%A5DashScope%E4%B8%BA%E4%BE%8B/" title="如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例">如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例</a><time datetime="2025-06-02T18:03:33.000Z" title="Created 2025-06-02 18:03:33">2025-06-02</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2024 - 2026 By 风业</span><span class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Reading Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light and Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle Between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Settings"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table of Contents"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="Back to Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  Loading Database</span></div><div class="local-search-input"><input placeholder="Search for Posts" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

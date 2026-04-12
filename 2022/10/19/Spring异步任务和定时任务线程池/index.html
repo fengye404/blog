@@ -1,0 +1,274 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Spring异步任务和定时任务线程池 | fengye's blog</title><meta name="author" content="风业"><meta name="copyright" content="风业"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="前言我们都知道在Spring中，想要启用异步任务和定时任务非常简单，只要在配置类或者启动类上添加@EnableAsync和@EnableScheduling，然后在对应方法上添加@Async和@Schedule即可。那么@Async和@Schedule默认是在什么线程池中运行的呢？默认的线程池是什么配置？如何修改其配置？如何自定义线程池？ 异步任务执行器 TaskExecutor异步任务执行器的接">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring异步任务和定时任务线程池">
+<meta property="og:url" content="https://fengye404.top/2022/10/19/Spring%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%92%8C%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%BA%BF%E7%A8%8B%E6%B1%A0/index.html">
+<meta property="og:site_name" content="fengye&#39;s blog">
+<meta property="og:description" content="前言我们都知道在Spring中，想要启用异步任务和定时任务非常简单，只要在配置类或者启动类上添加@EnableAsync和@EnableScheduling，然后在对应方法上添加@Async和@Schedule即可。那么@Async和@Schedule默认是在什么线程池中运行的呢？默认的线程池是什么配置？如何修改其配置？如何自定义线程池？ 异步任务执行器 TaskExecutor异步任务执行器的接">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640">
+<meta property="article:published_time" content="2022-10-19T15:47:11.000Z">
+<meta property="article:modified_time" content="2026-04-12T11:12:00.212Z">
+<meta property="article:author" content="风业">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Spring异步任务和定时任务线程池",
+  "url": "https://fengye404.top/2022/10/19/Spring%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%92%8C%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%BA%BF%E7%A8%8B%E6%B1%A0/",
+  "image": "https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640",
+  "datePublished": "2022-10-19T15:47:11.000Z",
+  "dateModified": "2026-04-12T11:12:00.212Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "风业",
+      "url": "https://fengye404.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://fengye404.top/2022/10/19/Spring%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%92%8C%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%BA%BF%E7%A8%8B%E6%B1%A0/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"No results found for: ${query}","hits_stats":"${hits} articles found"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Failed',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: 'days',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Spring异步任务和定时任务线程池',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><script>window.paceOptions = {
+  restartOnPushState: false
+}
+
+btf.addGlobalFn('pjaxSend', () => {
+  Pace.restart()
+}, 'pace_restart')
+
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js/themes/blue/pace-theme-minimal.min.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div class="bg-animation" id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">35</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">fengye's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Spring异步任务和定时任务线程池</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  Back to Home</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> Search</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">Spring异步任务和定时任务线程池</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2022-10-19T15:47:11.000Z" title="Created 2022-10-19 15:47:11">2022-10-19</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-04-12T11:12:00.212Z" title="Updated 2026-04-12 11:12:00">2026-04-12</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">Word Count:</span><span class="word-count">1.4k</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post Views:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><div id="post-outdate-notice" data="{&quot;limitDay&quot;:720,&quot;messagePrev&quot;:&quot;It has been&quot;,&quot;messageNext&quot;:&quot;days since the last update, the content of the article may be outdated.&quot;,&quot;postUpdate&quot;:&quot;2026-04-12 11:12:00&quot;}" hidden></div><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>我们都知道在Spring中，想要启用异步任务和定时任务非常简单，只要在配置类或者启动类上添加<code>@EnableAsync</code>和<code>@EnableScheduling</code>，然后在对应方法上添加<code>@Async</code>和<code>@Schedule</code>即可。那么<code>@Async</code>和<code>@Schedule</code>默认是在什么线程池中运行的呢？默认的线程池是什么配置？如何修改其配置？如何自定义线程池？</p>
+<h2 id="异步任务执行器-TaskExecutor"><a href="#异步任务执行器-TaskExecutor" class="headerlink" title="异步任务执行器 TaskExecutor"></a>异步任务执行器 TaskExecutor</h2><p>异步任务执行器的接口是 <code>TaskExecutor</code> 。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@FunctionalInterface</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">TaskExecutor</span> <span class="keyword">extends</span> <span class="title class_">Executor</span> &#123;</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">void</span> <span class="title function_">execute</span><span class="params">(Runnable task)</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>TaskExecutor</code> 继承了 JDK 的 <code>Executor</code>（即平时经常使用的 <code>ExecutorService</code> 的父接口）。<code>TaskExecutor</code> 有很多实现类，Spring Boot默认提供的实现类是 <code>ThreadPoolTaskExecutor</code>，默认的配置：</p>
+<p>核心线程数：8，最大线程数：Integet.MAX_VALUE，队列使用LinkedBlockingQueue，队列容量：Integet.MAX_VALUE，空闲线程保留时间：60s，线程池拒绝策略：AbortPolicy。</p>
+<h3 id="修改默认线程池配置"><a href="#修改默认线程池配置" class="headerlink" title="修改默认线程池配置"></a>修改默认线程池配置</h3><p>在 SpringBoot 中可以通过 application.properties 修改其配置</p>
+<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#核心线程数</span></span><br><span class="line"><span class="attr">spring.task.execution.pool.core-size</span>=<span class="string">200</span></span><br><span class="line"><span class="comment">#最大线程数</span></span><br><span class="line"><span class="attr">spring.task.execution.pool.max-size</span>=<span class="string">1000</span></span><br><span class="line"><span class="comment">#空闲线程保留时间</span></span><br><span class="line"><span class="attr">spring.task.execution.pool.keep-alive</span>=<span class="string">3s</span></span><br><span class="line"><span class="comment">#队列容量</span></span><br><span class="line"><span class="attr">spring.task.execution.pool.queue-capacity</span>=<span class="string">1000</span></span><br><span class="line"><span class="comment">#线程名称前缀</span></span><br><span class="line"><span class="attr">spring.task.execution.thread-name-prefix</span>=<span class="string">my-task-thread-pool-</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="自定义线程池"><a href="#自定义线程池" class="headerlink" title="自定义线程池"></a>自定义线程池</h3><h4 id="添加自定义线程池"><a href="#添加自定义线程池" class="headerlink" title="添加自定义线程池"></a>添加自定义线程池</h4><p>可以添加一个Executor的实现类的Bean，同时在使用 <code>@Aysnc</code> 时指定调用哪个线程池执行。例如：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TaskExecutorConfig</span> &#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> Executor <span class="title function_">myTaskAsyncPool</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">ThreadPoolTaskExecutor</span> <span class="variable">executor</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ThreadPoolTaskExecutor</span>();</span><br><span class="line">        <span class="comment">//核心线程池大小</span></span><br><span class="line">        executor.setCorePoolSize(<span class="number">10</span>);</span><br><span class="line">        <span class="comment">//最大线程数</span></span><br><span class="line">        executor.setMaxPoolSize(<span class="number">100</span>);</span><br><span class="line">        <span class="comment">//队列容量</span></span><br><span class="line">        executor.setQueueCapacity(<span class="number">1000</span>);</span><br><span class="line">        <span class="comment">//活跃时间</span></span><br><span class="line">        executor.setKeepAliveSeconds(<span class="number">60</span>);</span><br><span class="line">        <span class="comment">//线程名字前缀</span></span><br><span class="line">        executor.setThreadNamePrefix(<span class="string">&quot;MyExecutor-&quot;</span>);</span><br><span class="line"> </span><br><span class="line">        <span class="comment">// setRejectedExecutionHandler：当pool已经达到max size的时候，如何处理新任务</span></span><br><span class="line">        <span class="comment">// CallerRunsPolicy：不在新线程中执行任务，而是由调用者所在的线程来执行</span></span><br><span class="line">        executor.setRejectedExecutionHandler(<span class="keyword">new</span> <span class="title class_">ThreadPoolExecutor</span>.CallerRunsPolicy());</span><br><span class="line">        executor.setWaitForTasksToCompleteOnShutdown(<span class="literal">true</span>);</span><br><span class="line">        executor.setAwaitTerminationSeconds(<span class="number">60</span>);</span><br><span class="line">        executor.initialize();</span><br><span class="line">        <span class="keyword">return</span> executor;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TestService</span>&#123;</span><br><span class="line">    <span class="meta">@Aysnc(&quot;myTaskAsyncPool&quot;)</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">test</span><span class="params">()</span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;test&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="修改默认线程池"><a href="#修改默认线程池" class="headerlink" title="修改默认线程池"></a>修改默认线程池</h4><p>如果想把添加的线程池作为默认执行的线程池而不用每次都在 <code>@Async</code> 时指定，可以实现 AsyncConfigurer 接口。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TaskExecutorConfig</span> <span class="keyword">implements</span> <span class="title class_">AsyncConfigurer</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> Executor <span class="title function_">getAsyncExecutor</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">ThreadPoolTaskExecutor</span> <span class="variable">executor</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ThreadPoolTaskExecutor</span>();</span><br><span class="line">        <span class="comment">//核心线程池大小</span></span><br><span class="line">        executor.setCorePoolSize(<span class="number">10</span>);</span><br><span class="line">        <span class="comment">//最大线程数</span></span><br><span class="line">        executor.setMaxPoolSize(<span class="number">100</span>);</span><br><span class="line">        <span class="comment">//队列容量</span></span><br><span class="line">        executor.setQueueCapacity(<span class="number">1000</span>);</span><br><span class="line">        <span class="comment">//活跃时间</span></span><br><span class="line">        executor.setKeepAliveSeconds(<span class="number">60</span>);</span><br><span class="line">        <span class="comment">//线程名字前缀</span></span><br><span class="line">        executor.setThreadNamePrefix(<span class="string">&quot;MyExecutor-&quot;</span>);</span><br><span class="line"> </span><br><span class="line">        <span class="comment">// setRejectedExecutionHandler：当pool已经达到max size的时候，如何处理新任务</span></span><br><span class="line">        <span class="comment">// CallerRunsPolicy：不在新线程中执行任务，而是由调用者所在的线程来执行</span></span><br><span class="line">        executor.setRejectedExecutionHandler(<span class="keyword">new</span> <span class="title class_">ThreadPoolExecutor</span>.CallerRunsPolicy());</span><br><span class="line">        executor.setWaitForTasksToCompleteOnShutdown(<span class="literal">true</span>);</span><br><span class="line">        executor.setAwaitTerminationSeconds(<span class="number">60</span>);</span><br><span class="line">        executor.initialize();</span><br><span class="line">        <span class="keyword">return</span> executor;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TestService</span>&#123;</span><br><span class="line">    <span class="meta">@Aysnc</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">test</span><span class="params">()</span>&#123;</span><br><span class="line">        System.out.println(<span class="string">&quot;test&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="定时任务执行器-TaskScheduler"><a href="#定时任务执行器-TaskScheduler" class="headerlink" title="定时任务执行器 TaskScheduler"></a>定时任务执行器 TaskScheduler</h2><p>定时任务执行器的接口是 <code>TaskScheduler</code> 。<code>ThreadPoolTaskScheduler</code> 是它的一个重要实现，也是SpringBoot提供的默认定时任务线程池。需要注意的是，SpringBoot提供的 <code>ThreadPoolTaskScheduler</code> 默认线程池大小为1，因此如果不对定时任务线程池进行额外配置，定时任务都是串行排队执行的。在某些场景下可能导致定时任务并没有按时执行等情况。当然，也可以配合@Async，将定时任务都提交给异步线程池去执行，但是可能会遇到新的问题，例如：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Component</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TestTask</span> &#123;</span><br><span class="line">    <span class="meta">@Scheduled(cron = &quot;*/5 * * * * ?&quot;)</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">test1</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException &#123;</span><br><span class="line">        Thread.sleep(<span class="number">10000</span>);        <span class="comment">//模拟定时任务执行时长</span></span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    <span class="meta">@Scheduled(cron = &quot;*/5 * * * * ?&quot;)</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">test2</span><span class="params">()</span> &#123;</span><br><span class="line">		<span class="comment">//普通任务</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上面的代码中，如果希望test1()之间是串行排队执行的话，即上一个test1()执行完之后，再执行下一个test1()，@Async就无法实现了。但是配置了定时任务线程池后，由于每个定时任务是由同一个线程来执行的，因此可以实现这样的需求。</p>
+<h3 id="修改默认线程池配置-1"><a href="#修改默认线程池配置-1" class="headerlink" title="修改默认线程池配置"></a>修改默认线程池配置</h3><figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">spring.task.scheduling.pool.size</span>=<span class="string">10</span></span><br><span class="line"><span class="attr">spring.task.scheduling.thread-name-prefix</span>=<span class="string">my-scheduling-thread-pool-</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="自定义默认线程池"><a href="#自定义默认线程池" class="headerlink" title="自定义默认线程池"></a>自定义默认线程池</h3><p>直接添加一个新的 <code>TaskScheduler</code> 的 Bean，覆盖 Spring 默认提供的 <code>ThreadPoolTaskScheduler</code> :</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TaskScheduleConfig</span>&#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> TaskScheduler <span class="title function_">getAsyncExecutor</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">ThreadPoolTaskScheduler</span> <span class="variable">threadPoolTaskScheduler</span>  <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ThreadPoolTaskScheduler</span>();</span><br><span class="line">        <span class="comment">// 配置线程池大小</span></span><br><span class="line">        threadPoolTaskScheduler.setPoolSize(<span class="number">10</span>);</span><br><span class="line">        <span class="comment">// 设置线程名</span></span><br><span class="line">        threadPoolTaskScheduler.setThreadNamePrefix(<span class="string">&quot;my-scheduling-thread-pool-&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>或者实现 <code>SchedulingConfigurer</code> ，向其中注册新的 <code>TaskScheduler</code> :</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ScheduleConfig</span> <span class="keyword">implements</span> <span class="title class_">SchedulingConfigurer</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">configureTasks</span><span class="params">(ScheduledTaskRegistrar taskRegistrar)</span> &#123;</span><br><span class="line">        taskRegistrar.setScheduler(taskScheduler());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> TaskScheduler <span class="title function_">taskScheduler</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="type">ThreadPoolTaskScheduler</span> <span class="variable">threadPoolTaskScheduler</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ThreadPoolTaskScheduler</span>();</span><br><span class="line">        <span class="comment">// 配置线程池大小</span></span><br><span class="line">        threadPoolTaskScheduler.setPoolSize(<span class="number">10</span>);</span><br><span class="line">        <span class="comment">// 设置线程名</span></span><br><span class="line">        threadPoolTaskScheduler.setThreadNamePrefix(<span class="string">&quot;my-scheduling-thread-pool-&quot;</span>);</span><br><span class="line">        <span class="keyword">return</span> threadPoolTaskScheduler;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="易混淆概念"><a href="#易混淆概念" class="headerlink" title="易混淆概念"></a>易混淆概念</h2><p>几个容易混淆的概念：</p>
+<ul>
+<li><p><code>Executor</code>：JDK提供的用于封装 <strong>线程（池）执行某个操作</strong> 的执行器接口</p>
+</li>
+<li><p><code>ExecutorService</code>：JDK提供的对 <code>Executor</code> 进一步封装的接口，用于执行普通线程池任务</p>
+</li>
+<li><p><code>ScheduledExecutorService</code>：JDK提供的对 <code>Executor</code> 进一步封装的接口，用于执行定时任务</p>
+</li>
+<li><p><code>ThreadPoolExecutor</code>：JDK提供的 <code>ExecutorService</code> 的实现类，也是<code>Executors.newFixedThreadPool(10)</code>之类的Executors工具类的返回</p>
+</li>
+<li><p><code>ScheduledThreadPoolExecutor</code>：JDK提供的 <code>ExecutorService</code> 的实现类</p>
+</li>
+<li><p><code>TaskExecutor</code>：Spring提供的用于封装异步任务线程池的执行器接口，本质和 <code>Executor</code> 相同</p>
+</li>
+<li><p><code>TaskSchedule</code>：Spring提供的用于封装定时任务线程池的执行器接口</p>
+</li>
+<li><p><code>ThreadPoolTaskExecutor</code>：Spring提供的 <code>TaskExecutor</code> 的实现类，本质也是对 <code>ThreadPoolExecutor</code> 的封装</p>
+</li>
+<li><p><code>ThreadPoolTaskScheduler</code>：Spring提供的 <code>TaskSchedule</code> 的实现类，本质也是对 <code>ScheduledThreadPoolExecutor</code> 的封装</p>
+</li>
+</ul>
+<blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="https://fookwood.com/spring-boot-tutorial-21-executor">默认线程池 – Spring Boot教程(21) | 闷瓜蛋子的BLOG (fookwood.com)</a></p>
+</blockquote>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="https://fengye404.top">风业</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="https://fengye404.top/2022/10/19/Spring%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E5%92%8C%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E7%BA%BF%E7%A8%8B%E6%B1%A0/">https://fengye404.top/2022/10/19/Spring异步任务和定时任务线程池/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles on this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless otherwise stated.</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" data-sites="x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2023/01/17/%E6%B5%85%E6%9E%90%E7%BD%91%E7%BB%9CIO%E6%A8%A1%E5%9E%8B/" title="浅析网络IO模型"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">Previous</div><div class="info-item-2">浅析网络IO模型</div></div><div class="info-2"><div class="info-item-1">前言I&#x2F;O 泛指的是 CPU 向 I&#x2F;O设备（硬盘、网卡）中读取&#x2F;写入数据。而本文主要介绍的是网络 I&#x2F;O，也就是借助于 Socket Api ，从网卡中读取数据。 Unix网络编程中的五种IO模型 参考：聊聊Linux 五种IO模型 - 简书 (jianshu.com)  一个I&#x2F;O操作通常分为两个阶段：  等待数据准备（从磁盘&#x2F;网卡中读取数据到内核空间中的缓冲区）。 从内核空间中的缓冲区向用户空间复制数据。  阻塞式I&#x2F;O 假设在服务器上有一个应用需要接收客户端通过socket传递的数据。 1234567891011121314151617181920//服务端应用程序伪代码：listen_fd = socket(domain,type,protocol);bind(listen_fd,server_addr,server_addrlen);listen(listen_fd,backlog);while(1)&#123;    //应用执行到accept的时候会被阻塞住，等待客户端的TCP连接	accept...</div></div></div></a><a class="pagination-related" href="/2022/10/06/SpringCloud%E7%AC%94%E8%AE%B0/" title="SpringCloud笔记"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">Next</div><div class="info-item-2">SpringCloud笔记</div></div><div class="info-2"><div class="info-item-1">前言什么是SpringCloud？Spring Cloud 被称为构建分布式微服务系统的“全家桶”，它并不是某一门技术，而是一系列微服务解决方案或框架的有序集合。它将市面上成熟的、经过验证的微服务框架整合起来，并通过 Spring Boot 的思想进行再封装，屏蔽调其中复杂的配置和实现原理，最终为开发人员提供了一套简单易懂、易部署和易维护的分布式系统开发工具包。 虽然 Spring Cloud 提供了很强大的功能，但是并没有提供所有的实现。其中的部分中间件只提供了统一的抽象API。不同厂商结合自身中间件，提供了自己的 Spring Cloud 套件。例如 Spring Cloud Netflix 、Spring Cloud Alibaba。（Netflix由于开源策略的调整，部分组件已经开始停止维护，因此不再适用于长久使用） 不同SpringCloud套件的常用组件    Spring Cloud 官方 Spring Cloud Netflix Spring Cloud Alibaba    配置中心 Spring Cloud Config&#x2F;Spring Cloud V...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">风业</div><div class="author-info-description">fengye's blog</div><div class="site-data"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">35</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">8</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fengye404"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>Announcement</span></div><div class="announcement_content">my new hexo blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%89%8D%E8%A8%80"><span class="toc-number">1.</span> <span class="toc-text">前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BC%82%E6%AD%A5%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C%E5%99%A8-TaskExecutor"><span class="toc-number">2.</span> <span class="toc-text">异步任务执行器 TaskExecutor</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%AE%E6%94%B9%E9%BB%98%E8%AE%A4%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%85%8D%E7%BD%AE"><span class="toc-number">2.1.</span> <span class="toc-text">修改默认线程池配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="toc-number">2.2.</span> <span class="toc-text">自定义线程池</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%B7%BB%E5%8A%A0%E8%87%AA%E5%AE%9A%E4%B9%89%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="toc-number">2.2.1.</span> <span class="toc-text">添加自定义线程池</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BF%AE%E6%94%B9%E9%BB%98%E8%AE%A4%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="toc-number">2.2.2.</span> <span class="toc-text">修改默认线程池</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C%E5%99%A8-TaskScheduler"><span class="toc-number">3.</span> <span class="toc-text">定时任务执行器 TaskScheduler</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BF%AE%E6%94%B9%E9%BB%98%E8%AE%A4%E7%BA%BF%E7%A8%8B%E6%B1%A0%E9%85%8D%E7%BD%AE-1"><span class="toc-number">3.1.</span> <span class="toc-text">修改默认线程池配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E9%BB%98%E8%AE%A4%E7%BA%BF%E7%A8%8B%E6%B1%A0"><span class="toc-number">3.2.</span> <span class="toc-text">自定义默认线程池</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%98%93%E6%B7%B7%E6%B7%86%E6%A6%82%E5%BF%B5"><span class="toc-number">4.</span> <span class="toc-text">易混淆概念</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Posts</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><time datetime="2026-03-22T04:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子">TermPilot：你的远程 vibe coding 搭子</a><time datetime="2026-03-21T02:10:00.000Z" title="Created 2026-03-21 02:10:00">2026-03-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践">GitHub Profile 自动同步实践</a><time datetime="2026-03-07T18:10:00.000Z" title="Created 2026-03-07 18:10:00">2026-03-07</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/12/14/ADK-Java-SDK-%E8%87%AA%E5%AE%9A%E4%B9%89%E6%A8%A1%E5%9E%8B%E6%9C%8D%E5%8A%A1/" title="ADK-Java-SDK 自定义模型服务">ADK-Java-SDK 自定义模型服务</a><time datetime="2025-12-14T05:19:10.000Z" title="Created 2025-12-14 05:19:10">2025-12-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/06/02/%E5%A6%82%E4%BD%95%E5%B0%86%E4%B8%8D%E5%85%BC%E5%AE%B9OpenAI%E8%A7%84%E8%8C%83%E7%9A%84%E5%A4%A7%E6%A8%A1%E5%9E%8BAPI%E5%B0%81%E8%A3%85%E4%B8%BASpringAI%20API--%E4%BB%A5DashScope%E4%B8%BA%E4%BE%8B/" title="如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例">如何将不兼容OpenAI规范的大模型API封装为SpringAI API--以DashScope为例</a><time datetime="2025-06-02T18:03:33.000Z" title="Created 2025-06-02 18:03:33">2025-06-02</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2024 - 2026 By 风业</span><span class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Reading Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light and Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle Between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Settings"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table of Contents"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="Back to Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  Loading Database</span></div><div class="local-search-input"><input placeholder="Search for Posts" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
