@@ -119,6 +119,16 @@ jobs:
           git pull --rebase origin hexo-source || true
           git push origin hexo-source || echo "Nothing to push"
 
+      - name: Deploy to gh-pages
+        run: |
+          cd fengye404.github.io
+          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          npm install
+          npx hexo generate
+          npx hexo deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Close issue with comment
         if: success() && github.event_name == 'issues'
         uses: actions/github-script@v7
