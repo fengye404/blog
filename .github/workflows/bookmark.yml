@@ -122,7 +122,9 @@ jobs:
       - name: Deploy to gh-pages
         run: |
           cd fengye404.github.io
-          git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          sed -i "s|repo: https://github.com/fengye404/blog|repo: https://x-access-token:${GITHUB_TOKEN}@github.com/fengye404/blog|" _config.yml
           npm install
           npx hexo generate
           npx hexo deploy
