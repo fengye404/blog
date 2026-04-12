@@ -1,11 +1,1 @@
-- class_name: AI & LLM
-  class_desc: 人工智能与大模型
-  bookmark_list:
-    - title: "Launching Claude Managed Agents"
-      link: /bookmarks/launching-claude-managed-agents/
-      description: "Lance Martin 介绍 Claude Managed Agents——预构建的可配置 Agent 框架，支持长时间任务和多 Agent 协作"
-      date: "2026-04-12"
-    - title: "Thoughts on Claude Managed Agents - Lance Martin"
-      link: /bookmarks/anthropic-managed-agents-blog/
-      description: "Lance Martin 分享关于 Agent Harness 和长周期任务基础设施的思考"
-      date: "2026-04-12"
+[]
