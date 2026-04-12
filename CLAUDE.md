@@ -55,7 +55,7 @@ mkdir -p fengye404.github.io/source/bookmarks/<slug>
 
 #### 情况 A: X/Twitter URL（包含 x.com 或 twitter.com）
 
-**必须同时运行两个抓取器，然后比较选优。不要只跑一个！**
+**必须运行三步抓取，不要跳过任何一步！**
 
 **第一步：运行 fetch_tweet.py**（X_AUTH_TOKEN 环境变量已设置，脚本会自动使用）：
 
@@ -63,23 +63,34 @@ mkdir -p fengye404.github.io/source/bookmarks/<slug>
 python3 /tmp/fengye-skills/fengye-x-fetch/scripts/fetch_tweet.py "<url>" --full-article --download-media fengye404.github.io/source/bookmarks/<slug>
 ```
 
-**第二步：运行 fetch_markdown.py**（始终运行，不是 fallback）：
+**第二步：运行 fetch_markdown.py 抓取 tweet 页面**（始终运行，不是 fallback）：
 
 ```bash
 python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url>" --download-media fengye404.github.io/source/bookmarks/<slug>
 ```
 
-**第三步：比较两个结果，选更完整的那个：**
+**第三步（关键！）：检查 tweet 中是否包含外部链接。如果有，用 fetch_markdown.py 抓取那个外部链接：**
+
+查看第一步和第二步的输出，找到 tweet 正文中的外部 URL（如 `anthropic.com/...`、`medium.com/...`、`substack.com/...` 等，**排除** `x.com`、`twitter.com`、`t.co` 短链接本身的 tweet 链接）。
+
+如果找到了外部文章链接：
+```bash
+python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<外部文章URL>" --download-media fengye404.github.io/source/bookmarks/<slug>
+```
+
+> **⚠️ 这一步极其重要！** 大多数值得收藏的 X/Twitter 链接都是分享某篇文章的 tweet。tweet 本身只有一两段话，真正有价值的内容在 tweet 中链接的那篇外部文章里。如果你跳过这一步，收藏的内容将只有一段 tweet 摘要，毫无价值。
+
+**第四步：比较所有结果，选最完整的：**
+
+你现在最多有 3 个结果：fetch_tweet.py 的结果、fetch_markdown.py 抓 tweet URL 的结果、fetch_markdown.py 抓外部链接的结果。
 
 比较维度（按优先级）：
-1. **正文长度**：body 字符数更多的通常更完整
-2. **标题**：是否包含有意义的文章标题（不只是用户名/tweet ID）
-3. **图片数量**：downloaded_media 列表更长的更完整
-4. **内容完整性**：是否包含完整文章正文，还是只有 tweet 摘要/一段话
+1. **正文长度**：body 字符数更多的通常更完整（完整博客文章通常几千字，tweet 只有几十字）
+2. **内容完整性**：是否包含完整文章正文，还是只有 tweet 摘要/一段话
+3. **标题**：是否包含有意义的文章标题
+4. **图片数量**：downloaded_media 列表更长的更完整
 
-典型场景：X/Twitter 链接往往包含外部文章链接（如博客文章），fetch_tweet.py 只能拿到 tweet 本身的文字，而 fetch_markdown.py 能跟随链接抓到完整文章。**这种情况下必须选 fetch_markdown.py 的结果。**
-
-> ⚠️ 如果两个都成功了，**绝大多数情况下 fetch_markdown.py 的结果更完整**。只有纯 tweet（无外部链接）时 fetch_tweet.py 才可能更好。
+> ⚠️ **如果第三步抓到了外部文章，几乎 100% 应该使用第三步的结果**。外部文章内容远比 tweet 本身丰富。
 
 #### 情况 B: 其他 URL
 
