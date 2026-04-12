@@ -98,6 +98,11 @@ jobs:
           claude -p "请严格按照 CLAUDE.md 中的收藏工作流，收藏以下 URL。
           不要跳过任何步骤，必须调用 python3 脚本抓取内容。
 
+          ⚠️ 重要：你正在 CI 无人值守环境中运行。
+          - 直接执行所有命令，不要等待确认或批准
+          - 不要输出"需要批准"之类的话，直接做
+          - 所有 Bash 命令直接调用工具执行，不要只打印命令文本
+
           URL: ${BOOKMARK_URL}
           备注: ${BOOKMARK_NOTE}
 
@@ -107,7 +112,8 @@ jobs:
           - fetch_tweet.py 路径: /tmp/fengye-skills/fengye-x-fetch/scripts/fetch_tweet.py
           - fetch_markdown.py 路径: /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py
 
-          完成后用 git add -A && git commit 提交所有变更（不要 add /tmp 下的文件）。" \
+          最后一步必须执行：git add -A -- fengye404.github.io/source/ bookmarks/ && git commit -m 'bookmark: <标题>'。
+          不要 add /tmp 下的文件。不要跳过 git commit。" \
             --model kimi-k2.5 \
             --max-turns 50 \
             --allowedTools "Bash(python3:*)" "Bash(mkdir:*)" "Bash(ls:*)" "Bash(cat:*)" "Bash(git:*)" "Bash(head:*)" "Bash(wc:*)" "Bash(grep:*)" "Bash(sed:*)" "Bash(cp:*)" "Bash(mv:*)" "Edit" "Read" "Write"
@@ -116,6 +122,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Fallback: if agent didn't commit, do it here
+          if ! git diff --cached --quiet || ! git diff --quiet; then
+            git add -A -- fengye404.github.io/source/ bookmarks/
+            git commit -m "bookmark: auto-commit from CI" || true
+          fi
           git pull --rebase origin hexo-source || true
           git push origin hexo-source || echo "Nothing to push"
 
