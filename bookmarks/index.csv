@@ -2,3 +2,4 @@ title,category,url,desc,saved_path
 The Bird is Freed,Tech News,https://x.com/elonmusk/status/1585841080431321088,Elon Musk 收购 Twitter 的历史性推文，标志着这个社交平台进入新时代,articles/the-bird-is-freed.md
 The Best Code is No Code At All,Programming,https://blog.codinghorror.com/the-best-code-is-no-code-at-all/,Jeff Atwood 关于代码简洁性的经典文章：最好的代码是没有代码，每次写代码都应该是在穷尽其他选项之后的无奈之举,articles/best-code-is-no-code.md
 Superlinear Returns,Startup,https://paulgraham.com/superlinear.html,Paul Graham 探讨超线性回报：在绩效回报超线性的领域，卓越表现的回报远高于线性增长，这是创业者必须理解的世界法则,articles/superlinear.md
+Monolith First,Programming,https://martinfowler.com/bliki/MonolithFirst.html,Martin Fowler 经典文章：新项目应该从单体架构开始，即使你很确定未来需要微服务架构,articles/monolith-first.md
