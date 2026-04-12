@@ -1,1 +1,7 @@
-[]
+- class_name: "AI & LLM"
+  class_desc: "人工智能与大语言模型相关"
+  link_list:
+    - title: "Launching Claude Managed Agents"
+      link: /bookmarks/launching-claude-managed-agents/
+      description: "Anthropic 发布 Claude Managed Agents：一个预构建、可配置的 Agent 运行框架，支持长期任务执行"
+      date: "2026-04-12"
