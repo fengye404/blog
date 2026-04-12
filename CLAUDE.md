@@ -73,7 +73,7 @@ python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url
 
 查看第一步和第二步的输出，找到 tweet 正文中的外部 URL（如 `anthropic.com/...`、`medium.com/...`、`substack.com/...` 等，**排除** `x.com`、`twitter.com`、`t.co` 短链接本身的 tweet 链接）。
 
-> **特殊情况：X Article 链接**（`x.com/i/article/...`）。这是 X 的长文功能，需要登录才能查看，外部 fetcher 无法抓取。如果 tweet 内容只包含一个 X Article 链接且 fetch_tweet.py 的 `--full-article` 未能展开它，则直接使用 fetch_tweet.py 的结果（即使只有推文摘要），不要反复重试。
+> **特殊情况：X Article 链接**（`x.com/i/article/...`）。这是 X 的长文功能。fetch_tweet.py `--full-article` 已支持自动提取 X Article 的完整正文和图片。如果推文中包含 X Article 链接，fetch_tweet.py 的输出会自动包含完整文章内容，无需额外抓取。
 
 如果找到了外部文章链接：
 ```bash
