@@ -1,3 +1,11 @@
+- class_name: Tech News
+  class_desc: 科技行业重要新闻与历史时刻
+  link_list:
+    - title: "The Bird is Freed"
+      link: /bookmarks/the-bird-is-freed/
+      description: "Elon Musk 收购 Twitter 的历史性推文，标志着这个社交平台进入新时代"
+      date: "2025-04-12"
+
 - class_name: Programming
   class_desc: 软件开发与编程思想
   link_list:
