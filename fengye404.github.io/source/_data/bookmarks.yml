@@ -1,1 +1,7 @@
-[]
+- class_name: AI & LLM
+  class_desc: 人工智能与大语言模型相关
+  link_list:
+    - title: "Scaling Managed Agents: Decoupling the brain from the hands"
+      link: /bookmarks/scaling-managed-agents-decoupling-brain-hands/
+      description: "Anthropic工程博客：Managed Agents的架构设计，将'大脑'与'双手'解耦，实现可扩展的智能体基础设施"
+      date: "2026-04-12"
