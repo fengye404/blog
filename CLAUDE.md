@@ -43,9 +43,13 @@
 - 如果已存在：跳过，输出"该 URL 已收藏"，不执行后续步骤。
 - 如果不存在：继续。
 
-### Step 2: 抓取内容（双重抓取 + 择优）
+### Step 2: 抓取内容
 
 **这是最关键的步骤，必须执行，不得跳过。**
+
+> **⚠️ 性能关键：所有脚本输出必须重定向到文件，禁止让输出打到 stdout！**
+> 脚本输出可达 20KB+，如果打到 stdout 会膨胀你的对话上下文，导致后续每一步都变慢。
+> 用 `> /tmp/result_X.md` 保存，用 `wc -c` 和 `head` 查看摘要。
 
 先创建媒体目录：
 
@@ -55,59 +59,74 @@ mkdir -p fengye404.github.io/source/bookmarks/<slug>
 
 #### 情况 A: X/Twitter URL（包含 x.com 或 twitter.com）
 
-**必须运行三步抓取，不要跳过任何一步！**
-
-**第一步：运行 fetch_tweet.py**（X_AUTH_TOKEN 环境变量已设置，脚本会自动使用）：
+**第一步：运行 fetch_tweet.py，输出保存到文件**：
 
 ```bash
-python3 /tmp/fengye-skills/fengye-x-fetch/scripts/fetch_tweet.py "<url>" --full-article --download-media fengye404.github.io/source/bookmarks/<slug>
+python3 /tmp/fengye-skills/fengye-x-fetch/scripts/fetch_tweet.py "<url>" \
+  --full-article --download-media fengye404.github.io/source/bookmarks/<slug> \
+  > /tmp/result_tweet.md 2>/tmp/err_tweet.txt
+echo "=== fetch_tweet.py: $(wc -c < /tmp/result_tweet.md) bytes ==="
+head -3 /tmp/result_tweet.md
 ```
 
-**第二步：运行 fetch_markdown.py 抓取 tweet 页面**（始终运行，不是 fallback）：
+**第二步：判断是否需要继续抓取**：
+
+- 如果 `/tmp/result_tweet.md` **≥ 5000 字节**：说明 fetch_tweet.py 已获取到完整内容（X Article 或长推文），**跳过 fetch_markdown.py**，直接使用 `/tmp/result_tweet.md`。
+- 如果 `/tmp/result_tweet.md` **< 5000 字节**：说明是短推文，需要继续。
+
+**第三步（仅短推文时执行）：检查外部链接并抓取**：
 
 ```bash
-python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url>" --download-media fengye404.github.io/source/bookmarks/<slug>
+# 在推文内容中查找外部链接（排除 x.com/twitter.com/t.co）
+grep -oP 'https?://[^\s)]+' /tmp/result_tweet.md | grep -v -E 'x\.com|twitter\.com|t\.co' | head -3
 ```
 
-**第三步（关键！）：检查 tweet 中是否包含外部链接。如果有，用 fetch_markdown.py 抓取那个外部链接：**
-
-查看第一步和第二步的输出，找到 tweet 正文中的外部 URL（如 `anthropic.com/...`、`medium.com/...`、`substack.com/...` 等，**排除** `x.com`、`twitter.com`、`t.co` 短链接本身的 tweet 链接）。
-
-> **特殊情况：X Article 链接**（`x.com/i/article/...`）。这是 X 的长文功能。fetch_tweet.py `--full-article` 已支持自动提取 X Article 的完整正文和图片。如果推文中包含 X Article 链接，fetch_tweet.py 的输出会自动包含完整文章内容，无需额外抓取。
-
-如果找到了外部文章链接：
+如果找到外部文章链接（如 `anthropic.com/...`、`medium.com/...` 等），抓取那个链接：
 ```bash
-python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<外部文章URL>" --download-media fengye404.github.io/source/bookmarks/<slug>
+python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<外部文章URL>" \
+  --download-media fengye404.github.io/source/bookmarks/<slug> \
+  > /tmp/result_external.md 2>/tmp/err_external.txt
+echo "=== fetch_markdown.py (external): $(wc -c < /tmp/result_external.md) bytes ==="
+head -3 /tmp/result_external.md
 ```
 
-> **⚠️ 这一步极其重要！** 大多数值得收藏的 X/Twitter 链接都是分享某篇文章的 tweet。tweet 本身只有一两段话，真正有价值的内容在 tweet 中链接的那篇外部文章里。如果你跳过这一步，收藏的内容将只有一段 tweet 摘要，毫无价值。
+如果没有外部链接，运行 fetch_markdown.py 抓推文页面作为备选：
+```bash
+python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url>" \
+  --download-media fengye404.github.io/source/bookmarks/<slug> \
+  > /tmp/result_md.md 2>/tmp/err_md.txt
+echo "=== fetch_markdown.py (tweet): $(wc -c < /tmp/result_md.md) bytes ==="
+head -3 /tmp/result_md.md
+```
 
-**第四步：比较所有结果，选最完整的：**
+> **⚠️ 大多数值得收藏的 X 链接是分享文章的 tweet。** 真正有价值的内容在外部链接里，不是 tweet 本身。如果有外部链接，优先用外部链接的结果。
 
-你现在最多有 3 个结果：fetch_tweet.py 的结果、fetch_markdown.py 抓 tweet URL 的结果、fetch_markdown.py 抓外部链接的结果。
+**第四步：选择最佳结果（用文件大小判断，不要 cat 文件内容！）**：
 
-比较维度（按优先级）：
-1. **正文长度**：body 字符数更多的通常更完整（完整博客文章通常几千字，tweet 只有几十字）
-2. **内容完整性**：是否包含完整文章正文，还是只有 tweet 摘要/一段话
-3. **标题**：是否包含有意义的文章标题
-4. **图片数量**：downloaded_media 列表更长的更完整
+```bash
+wc -c /tmp/result_*.md
+```
 
-> ⚠️ **如果第三步抓到了外部文章，几乎 100% 应该使用第三步的结果**。外部文章内容远比 tweet 本身丰富。
+选择 **字节数最大** 的文件。如果有外部文章结果，几乎 100% 应该用它。
+将最佳结果记为 `BEST_RESULT`（如 `/tmp/result_external.md`）。
 
 #### 情况 B: 其他 URL
 
-只需运行 fetch_markdown.py：
-
 ```bash
-python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url>" --download-media fengye404.github.io/source/bookmarks/<slug>
+python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url>" \
+  --download-media fengye404.github.io/source/bookmarks/<slug> \
+  > /tmp/result_md.md 2>/tmp/err_md.txt
+echo "=== fetch_markdown.py: $(wc -c < /tmp/result_md.md) bytes ==="
+head -3 /tmp/result_md.md
 ```
+
+`BEST_RESULT` = `/tmp/result_md.md`
 
 #### 抓取结果处理
 
-脚本会输出 JSON，包含 `title`、`body`、`downloaded_media` 等字段。
-- `body` 是文章的 Markdown 内容，**必须使用这个内容**，不要自己编写。
-- `downloaded_media` 列出下载的媒体文件。
-- 如果两个脚本都失败或输出为空，在 Issue 中说明失败原因。
+- 脚本输出 Markdown 格式的文章内容，已保存在 `/tmp/result_*.md` 文件中。
+- **必须使用脚本抓取的内容**，不要自己编写文章内容。
+- 如果所有结果文件都小于 100 字节 → 视为抓取失败，停止并报告。
 - 如果只有一个成功，使用成功的那个。
 
 ### Step 3: 生成 slug
@@ -122,12 +141,14 @@ python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url
 
 ### Step 4: 保存到博客收藏页
 
-1. 创建 `fengye404.github.io/source/bookmarks/<slug>/index.md`
-2. 图片已经通过 `--download-media` 下载到同目录了
+1. 从 `BEST_RESULT` 文件生成 `fengye404.github.io/source/bookmarks/<slug>/index.md`：
 
-**index.md 格式** （严格遵循，参考已有文章）：
+```bash
+# 提取标题（第一行去掉 # 前缀）
+TITLE=$(head -1 "$BEST_RESULT" | sed 's/^#\+ //')
 
-```markdown
+# 生成 index.md：frontmatter + 原文链接 + 正文内容
+cat > fengye404.github.io/source/bookmarks/<slug>/index.md << 'FRONTMATTER'
 ---
 title: "文章标题"
 date: YYYY-MM-DD
@@ -141,8 +162,17 @@ aside: false
 
 ---
 
-[抓取到的文章正文内容]
-[图片使用相对路径，如 ![alt](image-filename.jpg)]
+FRONTMATTER
+cat "$BEST_RESULT" >> fengye404.github.io/source/bookmarks/<slug>/index.md
+```
+
+> **注意**：上面的 `cat > ... << FRONTMATTER` 中的字段需要替换为实际值。如果 `BEST_RESULT` 第一行是标题行（`# xxx`），可以跳过它避免重复。
+
+2. **修正图片路径**：`BEST_RESULT` 中的图片路径可能是绝对路径（如 `/tmp/...` 或 `fengye404.github.io/source/bookmarks/<slug>/xxx.jpg`），需要改为相对路径：
+
+```bash
+sed -i 's|fengye404.github.io/source/bookmarks/<slug>/||g' fengye404.github.io/source/bookmarks/<slug>/index.md
+sed -i 's|/tmp/[^)]*\(\/[^/)]*\.\(jpg\|png\|gif\|svg\|webp\)\)|\1|g' fengye404.github.io/source/bookmarks/<slug>/index.md
 ```
 
 3. 更新 `fengye404.github.io/source/_data/bookmarks.yml`，在合适的 `class_name` 下添加条目：
@@ -162,9 +192,11 @@ aside: false
 
 ### Step 5: 保存到本地收藏集
 
-1. 复制一份完整内容到 `bookmarks/articles/<slug>.md`：
+1. 从 `BEST_RESULT` 生成 `bookmarks/articles/<slug>.md`：
 
-```markdown
+```bash
+# 生成 frontmatter + 正文
+cat > bookmarks/articles/<slug>.md << 'EOF'
 ---
 title: 文章标题
 url: 原始URL
@@ -172,8 +204,8 @@ category: 分类
 saved_date: YYYY-MM-DD
 ---
 
-[完整文章内容]
-[图片路径改为 ../assets/<slug>/filename.jpg]
+EOF
+cat "$BEST_RESULT" >> bookmarks/articles/<slug>.md
 ```
 
 2. 复制媒体文件到 `bookmarks/assets/<slug>/`：
@@ -209,9 +241,13 @@ git commit -m "bookmark: <文章标题简写>"
 
 ## 错误处理
 
-- X/Twitter URL 必须两个 fetcher 都运行，比较后选更完整的；只有一个失败时用另一个的结果
-- 两个都失败 → 在 Issue 中说明失败原因，不创建空文件
-- **所有 fetcher 都返回不到 100 字的有效正文** → 视为抓取失败，在 Issue 评论中说明原因并停止，不要反复尝试不同方法
+- 如果所有结果文件小于 100 字节 → 视为抓取失败，在 Issue 中说明失败原因，不创建空文件，不要反复尝试不同方法
 - 媒体下载失败 → 保留原始 URL（脚本已内置此行为）
 - 分类不确定 → 默认 "AI & LLM"
 - URL 404 / 内容不存在 → 输出说明，不创建空文件
+
+## 性能规则（必须遵守）
+
+- **绝对不要 `cat` 或 `echo` 大文件内容到你的对话**。如果需要查看内容，用 `head -5` 或 `wc -c`。
+- 创建 index.md 和 articles/*.md 时，使用 `cat > file << EOF ... EOF` + `cat "$BEST_RESULT" >> file`，不要把文件内容复制到命令中。
+- 比较结果用 `wc -c`（文件大小），不要读取全部内容来比较。
