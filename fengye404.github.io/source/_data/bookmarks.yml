@@ -1,1 +1,7 @@
-[]
+- class_name: AI & LLM
+  class_desc: 人工智能与大语言模型相关
+  link_list:
+    - title: "Lance Martin on X"
+      link: /bookmarks/lance-martin-x-article/
+      description: "LangChain 工程师 Lance Martin 分享的 X 文章"
+      date: "2026-04-08"
