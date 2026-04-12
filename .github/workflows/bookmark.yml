@@ -18,7 +18,7 @@ permissions:
   issues: write
 
 concurrency:
-  group: bookmark
+  group: bookmark-${{ github.event.issue.number || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -95,7 +95,8 @@ jobs:
           BOOKMARK_URL: ${{ steps.params.outputs.url }}
           BOOKMARK_NOTE: ${{ steps.params.outputs.note }}
         run: |
-          claude -p "请严格按照 CLAUDE.md 中的收藏工作流，收藏以下 URL。
+          for attempt in 1 2 3; do
+            if claude -p "请严格按照 CLAUDE.md 中的收藏工作流，收藏以下 URL。
           不要跳过任何步骤，必须调用 python3 脚本抓取内容。
 
           URL: ${BOOKMARK_URL}
@@ -109,9 +110,15 @@ jobs:
 
           最后一步必须执行：git add -A -- fengye404.github.io/source/ bookmarks/ && git commit -m 'bookmark: <标题>'。
           不要 add /tmp 下的文件。不要跳过 git commit。" \
-            --model kimi-k2.5 \
-            --max-turns 50 \
-            --dangerously-skip-permissions
+              --model kimi-k2.5 \
+              --max-turns 50 \
+              --dangerously-skip-permissions; then
+              echo "Agent succeeded on attempt $attempt"
+              break
+            fi
+            echo "Agent failed (attempt $attempt), retrying in 60s..."
+            sleep 60
+          done
 
       - name: Push changes
         run: |
@@ -122,8 +129,16 @@ jobs:
             git add -A -- fengye404.github.io/source/ bookmarks/
             git commit -m "bookmark: auto-commit from CI" || true
           fi
-          git pull --rebase origin hexo-source || true
-          git push origin hexo-source || echo "Nothing to push"
+          # Retry push with rebase to handle parallel runs
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin hexo-source || true
+            if git push origin hexo-source; then
+              echo "Push succeeded on attempt $i"
+              break
+            fi
+            echo "Push failed (attempt $i), retrying in ${i}0s..."
+            sleep "${i}0"
+          done
 
       - name: Deploy to gh-pages
         run: |
@@ -153,4 +168,22 @@ jobs:
               repo: context.repo.repo,
               issue_number: context.issue.number,
               state: 'closed'
+            });
+
+      - name: Comment on failure
+        if: failure() && github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '❌ 收藏失败。请检查 [CI 日志](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')。\n\n常见原因：URL 内容无法抓取、API 限流、推文已删除或受保护。'
+            });
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['failed']
             });
