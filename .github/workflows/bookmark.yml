@@ -109,8 +109,8 @@ jobs:
 
           完成后用 git add -A && git commit 提交所有变更（不要 add /tmp 下的文件）。" \
             --model kimi-k2.5 \
-            --max-turns 30 \
-            --allowedTools "Bash(python3:*)" "Bash(mkdir:*)" "Bash(ls:*)" "Bash(cat:*)" "Bash(git:*)" "Bash(head:*)" "Bash(wc:*)" "Bash(grep:*)" "Bash(sed:*)" "Bash(cp:*)" "Edit" "Read" "Write"
+            --max-turns 50 \
+            --allowedTools "Bash(python3:*)" "Bash(mkdir:*)" "Bash(ls:*)" "Bash(cat:*)" "Bash(git:*)" "Bash(head:*)" "Bash(wc:*)" "Bash(grep:*)" "Bash(sed:*)" "Bash(cp:*)" "Bash(mv:*)" "Edit" "Read" "Write"
 
       - name: Push changes
         run: |
