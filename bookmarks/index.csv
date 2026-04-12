@@ -4,3 +4,4 @@ The Best Code is No Code At All,Programming,https://blog.codinghorror.com/the-be
 Superlinear Returns,Startup,https://paulgraham.com/superlinear.html,Paul Graham 探讨超线性回报：在绩效回报超线性的领域，卓越表现的回报远高于线性增长，这是创业者必须理解的世界法则,articles/superlinear.md
 Monolith First,Programming,https://martinfowler.com/bliki/MonolithFirst.html,Martin Fowler 经典文章：新项目应该从单体架构开始，即使你很确定未来需要微服务架构,articles/monolith-first.md
 GitHub - anthropics/claude-code,AI & LLM,https://github.com/anthropics/claude-code,Claude Code 官方 GitHub 仓库：Anthropic 推出的终端智能编程工具，通过自然语言命令执行日常任务、解释复杂代码和处理 Git 工作流,articles/claude-code-github.md
+分布式系统的事务处理,Programming,https://coolshell.cn/articles/10910.html,"陈皓经典文章：深入讲解分布式系统中的事务处理，涵盖 Master-Slave/Master-Master、2PC/3PC、Paxos 算法、CAP 理论和 NWR 模型",articles/coolshell-10910.md

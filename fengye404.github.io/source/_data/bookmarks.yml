@@ -9,6 +9,10 @@
 - class_name: Programming
   class_desc: 软件开发与编程思想
   link_list:
+    - title: "分布式系统的事务处理"
+      link: /bookmarks/coolshell-10910/
+      description: "陈皓经典文章：深入讲解分布式系统中的事务处理，涵盖 Master-Slave/Master-Master、2PC/3PC、Paxos 算法、CAP 理论和 NWR 模型"
+      date: "2026-04-12"
     - title: "Monolith First"
       link: /bookmarks/monolith-first/
       description: "Martin Fowler 经典文章：新项目应该从单体架构开始，即使你很确定未来需要微服务架构"
