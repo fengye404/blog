@@ -1,1 +1,7 @@
-[]
+- class_name: AI & LLM
+  class_desc: 人工智能与大语言模型相关
+  link_list:
+    - title: "Lance Martin on Claude Managed Agents and Agent Harnesses"
+      link: /bookmarks/claude-managed-agents-harnesses/
+      description: "Lance Martin 关于 Claude Managed Agents 的技术分享，探讨 agent harnesses 和长周期任务的基础设施"
+      date: "2026-04-12"
