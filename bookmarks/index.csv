@@ -1,10 +1,1 @@
-title,category,url,desc,saved_path
-CPU Flame Graphs,Programming,https://www.brendangregg.com/FlameGraphs/cpuflamegraphs.html,"Brendan Gregg 经典文章：CPU 火焰图详解，介绍如何使用可视化技术分析 CPU 性能瓶颈，涵盖 perf、eBPF、DTrace 等多种工具的使用方法",articles/cpuflamegraphs.md
-The Bird is Freed,Tech News,https://x.com/elonmusk/status/1585841080431321088,Elon Musk 收购 Twitter 的历史性推文，标志着这个社交平台进入新时代,articles/the-bird-is-freed.md
-The Best Code is No Code At All,Programming,https://blog.codinghorror.com/the-best-code-is-no-code-at-all/,Jeff Atwood 关于代码简洁性的经典文章：最好的代码是没有代码，每次写代码都应该是在穷尽其他选项之后的无奈之举,articles/best-code-is-no-code.md
-Superlinear Returns,Startup,https://paulgraham.com/superlinear.html,Paul Graham 探讨超线性回报：在绩效回报超线性的领域，卓越表现的回报远高于线性增长，这是创业者必须理解的世界法则,articles/superlinear.md
-Monolith First,Programming,https://martinfowler.com/bliki/MonolithFirst.html,Martin Fowler 经典文章：新项目应该从单体架构开始，即使你很确定未来需要微服务架构,articles/monolith-first.md
-GitHub - anthropics/claude-code,AI & LLM,https://github.com/anthropics/claude-code,Claude Code 官方 GitHub 仓库：Anthropic 推出的终端智能编程工具，通过自然语言命令执行日常任务、解释复杂代码和处理 Git 工作流,articles/claude-code-github.md
-The Joel Test: 12 Steps to Better Code,Programming,https://www.joelonsoftware.com/2000/08/09/the-joel-test-12-steps-to-better-code/,Joel Spolsky 经典文章：评估软件团队质量的 12 个简单问题，满分 12 分，10 分以下说明团队存在严重问题,articles/joel-test-12-steps-better-code.md
-分布式系统的事务处理,Programming,https://coolshell.cn/articles/10910.html,"陈皓经典文章：深入讲解分布式系统中的事务处理，涵盖 Master-Slave/Master-Master、2PC/3PC、Paxos 算法、CAP 理论和 NWR 模型",articles/coolshell-10910.md
-Tree of Thoughts: Deliberate Problem Solving with Large Language Models,AI & LLM,https://arxiv.org/abs/2305.10601,"NeurIPS 2023 论文：提出 Tree of Thoughts (ToT) 框架，让大语言模型能够探索多条推理路径并自我评估选择，在 Game of 24 任务上成功率从 4% 提升到 74%",articles/tree-of-thoughts-llm.md
+url,title,slug,date,category,description
