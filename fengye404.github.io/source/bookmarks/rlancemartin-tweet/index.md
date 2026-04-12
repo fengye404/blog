@@ -1,0 +1,17 @@
+---
+title: "Thoughts on Claude Managed Agents"
+date: 2026-04-12
+comments: false
+aside: false
+---
+
+> **原文链接：** [https://x.com/RLanceMartin/status/2042662074254528921](https://x.com/RLanceMartin/status/2042662074254528921)
+> **作者：** Lance Martin
+> **收藏日期：** 2026-04-12
+
+---
+
+i co-wrote the Anthropic engineering blog on Claude Managed Agents, and wanted to share some thoughts on agent harnesses + infrastructure for long-horizon tasks ... 🧵
+https://www.anthropic.com/engineering/managed-agents
+
+![Claude Managed Agents](/bookmarks/rlancemartin-tweet/claude-managed-agents.jpg)

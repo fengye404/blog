@@ -1,1 +1,7 @@
-[]
+-
+  class_name: AI & LLM
+  link_list:
+    - title: "Thoughts on Claude Managed Agents"
+      link: /bookmarks/rlancemartin-tweet/
+      description: "Lance Martin 关于 Claude Managed Agents 的思考和工程博客分享，探讨 agent harnesses 和长周期任务的基础设施"
+      date: "2026-04-12"
