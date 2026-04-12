@@ -43,29 +43,49 @@
 - 如果已存在：跳过，输出"该 URL 已收藏"，不执行后续步骤。
 - 如果不存在：继续。
 
-### Step 2: 判断 URL 类型并抓取内容
+### Step 2: 抓取内容（双重抓取 + 择优）
 
 **这是最关键的步骤，必须执行，不得跳过。**
 
-#### 情况 A: X/Twitter URL（包含 x.com 或 twitter.com）
-
-**必须运行以下命令**（X_AUTH_TOKEN 环境变量已设置，脚本会自动使用）：
+先创建媒体目录：
 
 ```bash
 mkdir -p fengye404.github.io/source/bookmarks/<slug>
+```
+
+#### 情况 A: X/Twitter URL（包含 x.com 或 twitter.com）
+
+**必须同时运行两个抓取器，然后比较选优。不要只跑一个！**
+
+**第一步：运行 fetch_tweet.py**（X_AUTH_TOKEN 环境变量已设置，脚本会自动使用）：
+
+```bash
 python3 /tmp/fengye-skills/fengye-x-fetch/scripts/fetch_tweet.py "<url>" --full-article --download-media fengye404.github.io/source/bookmarks/<slug>
 ```
 
-如果 fetch_tweet.py 失败，再用 fetch_markdown.py 作为 fallback：
+**第二步：运行 fetch_markdown.py**（始终运行，不是 fallback）：
 
 ```bash
 python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url>" --download-media fengye404.github.io/source/bookmarks/<slug>
 ```
 
+**第三步：比较两个结果，选更完整的那个：**
+
+比较维度（按优先级）：
+1. **正文长度**：body 字符数更多的通常更完整
+2. **标题**：是否包含有意义的文章标题（不只是用户名/tweet ID）
+3. **图片数量**：downloaded_media 列表更长的更完整
+4. **内容完整性**：是否包含完整文章正文，还是只有 tweet 摘要/一段话
+
+典型场景：X/Twitter 链接往往包含外部文章链接（如博客文章），fetch_tweet.py 只能拿到 tweet 本身的文字，而 fetch_markdown.py 能跟随链接抓到完整文章。**这种情况下必须选 fetch_markdown.py 的结果。**
+
+> ⚠️ 如果两个都成功了，**绝大多数情况下 fetch_markdown.py 的结果更完整**。只有纯 tweet（无外部链接）时 fetch_tweet.py 才可能更好。
+
 #### 情况 B: 其他 URL
 
+只需运行 fetch_markdown.py：
+
 ```bash
-mkdir -p fengye404.github.io/source/bookmarks/<slug>
 python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url>" --download-media fengye404.github.io/source/bookmarks/<slug>
 ```
 
@@ -74,7 +94,8 @@ python3 /tmp/fengye-skills/fengye-markdown-fetch/scripts/fetch_markdown.py "<url
 脚本会输出 JSON，包含 `title`、`body`、`downloaded_media` 等字段。
 - `body` 是文章的 Markdown 内容，**必须使用这个内容**，不要自己编写。
 - `downloaded_media` 列出下载的媒体文件。
-- 如果脚本输出为空或报错，在 Issue 中说明失败原因。
+- 如果两个脚本都失败或输出为空，在 Issue 中说明失败原因。
+- 如果只有一个成功，使用成功的那个。
 
 ### Step 3: 生成 slug
 
@@ -175,8 +196,8 @@ git commit -m "bookmark: <文章标题简写>"
 
 ## 错误处理
 
-- 抓取失败 → 尝试另一个 fetcher 作为 fallback
-- X/Twitter 抓取失败 → 不要放弃，先用 fetch_tweet.py 试，再用 fetch_markdown.py 试
+- X/Twitter URL 必须两个 fetcher 都运行，比较后选更完整的；只有一个失败时用另一个的结果
+- 两个都失败 → 在 Issue 中说明失败原因，不创建空文件
 - 媒体下载失败 → 保留原始 URL（脚本已内置此行为）
 - 分类不确定 → 默认 "AI & LLM"
 - URL 404 / 内容不存在 → 输出说明，不创建空文件
