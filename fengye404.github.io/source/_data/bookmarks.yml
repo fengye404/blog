@@ -25,3 +25,11 @@
       link: /bookmarks/superlinear/
       description: "Paul Graham 探讨超线性回报：在绩效回报超线性的领域，卓越表现的回报远高于线性增长，这是创业者必须理解的世界法则"
       date: "2026-04-12"
+
+- class_name: AI & LLM
+  class_desc: 人工智能与大语言模型
+  link_list:
+    - title: "GitHub - anthropics/claude-code"
+      link: /bookmarks/claude-code-github/
+      description: "Claude Code 官方 GitHub 仓库：Anthropic 推出的终端智能编程工具，通过自然语言命令执行日常任务、解释复杂代码和处理 Git 工作流"
+      date: "2026-04-12"
