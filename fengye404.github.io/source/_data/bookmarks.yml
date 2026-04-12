@@ -9,6 +9,10 @@
 - class_name: Programming
   class_desc: 软件开发与编程思想
   link_list:
+    - title: "CPU Flame Graphs"
+      link: /bookmarks/cpuflamegraphs/
+      description: "Brendan Gregg 经典文章：CPU 火焰图详解，介绍如何使用可视化技术分析 CPU 性能瓶颈，涵盖 perf、eBPF、DTrace 等多种工具的使用方法"
+      date: "2026-04-12"
     - title: "The Joel Test: 12 Steps to Better Code"
       link: /bookmarks/joel-test-12-steps-better-code/
       description: "Joel Spolsky 经典文章：评估软件团队质量的 12 个简单问题，满分 12 分，10 分以下说明团队存在严重问题"
