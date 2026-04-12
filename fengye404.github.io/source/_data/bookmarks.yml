@@ -1,0 +1,7 @@
+AI & LLM:
+  class_name: AI & LLM
+  link_list:
+    - title: "Anthropic 官方博文：多智能体协作指南：五种主流模式怎么选、怎么用？"
+      link: /bookmarks/anthropic-multi-agent-guide/
+      description: "Anthropic 官方发布的多智能体协作模式指南，详解生成-验证者、调度-子智能体、智能体团队、消息总线、共享状态五种模式的原理与适用场景"
+      date: "2026-04-12"
