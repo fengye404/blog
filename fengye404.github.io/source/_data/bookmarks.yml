@@ -9,6 +9,10 @@
 - class_name: Programming
   class_desc: 软件开发与编程思想
   link_list:
+    - title: "The Joel Test: 12 Steps to Better Code"
+      link: /bookmarks/joel-test-12-steps-better-code/
+      description: "Joel Spolsky 经典文章：评估软件团队质量的 12 个简单问题，满分 12 分，10 分以下说明团队存在严重问题"
+      date: "2026-04-12"
     - title: "分布式系统的事务处理"
       link: /bookmarks/coolshell-10910/
       description: "陈皓经典文章：深入讲解分布式系统中的事务处理，涵盖 Master-Slave/Master-Master、2PC/3PC、Paxos 算法、CAP 理论和 NWR 模型"
