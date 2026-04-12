@@ -95,6 +95,7 @@ jobs:
           BOOKMARK_URL: ${{ steps.params.outputs.url }}
           BOOKMARK_NOTE: ${{ steps.params.outputs.note }}
         run: |
+          agent_success=false
           for attempt in 1 2 3; do
             if claude -p "请严格按照 CLAUDE.md 中的收藏工作流，收藏以下 URL。
           不要跳过任何步骤，必须调用 python3 脚本抓取内容。
@@ -114,11 +115,16 @@ jobs:
               --max-turns 50 \
               --dangerously-skip-permissions; then
               echo "Agent succeeded on attempt $attempt"
+              agent_success=true
               break
             fi
             echo "Agent failed (attempt $attempt), retrying in 60s..."
             sleep 60
           done
+          if [ "$agent_success" = false ]; then
+            echo "::error::All 3 agent attempts failed"
+            exit 1
+          fi
 
       - name: Push changes
         run: |
@@ -130,15 +136,21 @@ jobs:
             git commit -m "bookmark: auto-commit from CI" || true
           fi
           # Retry push with rebase to handle parallel runs
+          push_success=false
           for i in 1 2 3 4 5; do
             git pull --rebase origin hexo-source || true
             if git push origin hexo-source; then
               echo "Push succeeded on attempt $i"
+              push_success=true
               break
             fi
             echo "Push failed (attempt $i), retrying in ${i}0s..."
             sleep "${i}0"
           done
+          if [ "$push_success" = false ]; then
+            echo "::error::All 5 push attempts failed"
+            exit 1
+          fi
 
       - name: Deploy to gh-pages
         run: |
@@ -171,15 +183,20 @@ jobs:
             });
 
       - name: Comment on failure
-        if: failure() && github.event_name == 'issues'
+        if: always() && (failure() || cancelled()) && github.event_name == 'issues'
         uses: actions/github-script@v7
         with:
           script: |
+            const isCancelled = '${{ job.status }}' === 'cancelled';
+            const reason = isCancelled
+              ? '⏱️ 执行超时或被取消。'
+              : '❌ 执行过程中出错。';
+            const body = reason + ' 请检查 [CI 日志](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')。\n\n常见原因：URL 内容无法抓取、API 限流、推文已删除或受保护、执行超时。';
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: '❌ 收藏失败。请检查 [CI 日志](' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')。\n\n常见原因：URL 内容无法抓取、API 限流、推文已删除或受保护。'
+              body: body
             });
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
