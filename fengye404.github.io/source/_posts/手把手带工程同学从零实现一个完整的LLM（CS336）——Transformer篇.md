@@ -16,35 +16,33 @@ tags:
 
 ## 前言
 
-最近我在学 CS336「Language Modeling from Scratch」，斯坦福开的大语言模型构建课程。这门课在 X 上讨论度很高，但中文社区里完整分享学习过程的还不多，所以我想边学边写这个系列，把整个过程记录下来，也当作自己的学习笔记。
+CS336 是斯坦福的「Language Modeling from Scratch」，讲怎么从零构建一个语言模型。课程在 X 上讨论度很高，中文社区的完整学习记录却不多，这个系列算是一次补充。
 
-先叠个甲：我之前的背景是纯工程开发，25 年初开始转 Agent 方向，没有受过系统的机器学习训练。
+名字里的 from Scratch 是从零手搓，课程本身不从零教学。讲义默认读者有神经网络和数学基础，纯工程背景上手要补不少课。这也是写这个系列的原因：尽量把工程同学容易卡住的地方讲透。
 
-这门课名字里的 from Scratch 是从零手搓的意思，课程本身不会从零教学。讲义默认你有神经网络和数学基础，对纯工程背景的人来说，学起来是要补不少课的。这也是我写这个系列的原因，尽量把工程同学会卡住的地方讲透。
+先交代背景：纯工程开发出身，25 年初转向 Agent 开发，没有受过系统的机器学习训练。
 
-这一篇是系列的第一篇，跟随 CS336 Assignment1 的思路，完整走一遍从零手搓 Transformer 的过程。不过我不会一上来就讲组件，先用自己写的一组小 lab 建立体感，再进 A1 的实现。最终要手搓的是现在真正在用的结构：pre-norm、RMSNorm、RoPE、SwiGLU 都会出现。这些变体为什么换、换完有什么收益，本身就是这门课最有价值的部分。文中代码都在本机跑过，测试方法一并写出来。
+这是系列第一篇，跟随 Assignment1 的思路，完整走一遍从零手搓 Transformer 的过程。为了先建立体感，开头用一组小 lab 热身，再进 A1 的实现。最终手搓的是现在真正在用的结构：pre-norm、RMSNorm、RoPE、SwiGLU 都会出现。这些变体为什么换、换完有什么收益，本身就是这门课最有价值的部分。文中代码都在本机跑过，测试方法一并写出来。
 
 Assignment1 的原始资料在[这里](https://github.com/stanford-cs336/assignment1-basics/tree/main)。课程 honor code 要求独立完成实现，在跟课的同学先自己写，这篇当作复盘参考。
 
 ## 为什么要学习这个
 
-动手之前先回答一个问题：都 2026 年了，模型 API 一个比一个强，为什么还要花时间学底层？
+都 2026 年了，模型 API 一个比一个强，为什么还要花时间学底层？
 
 CS336 的课程导论里给过答案：把语言模型当成黑盒，能做的事情就止步于调 API 和改 prompt；理解内部结构，才能判断什么问题该交给模型，什么问题该在模型外面解决。
 
-这个判断放到 Agent 开发上更具体。我今年做的一直是 Agent 相关的工作，见过很多问题表面看是 prompt 没写好，往深了挖是模型的行为边界没搞清楚。举几个例子：长上下文方案该硬塞还是做检索，取决于模型训练时的序列长度和位置编码是怎么设计的；推理成本和并发吞吐，取决于 KV cache 随序列怎么增长。再往下还有 tokenizer 的切分方式，它直接决定工具调用参数里那些空格和转义长什么样。
+这个判断放到 Agent 开发上更具体。很多问题表面看是 prompt 没写好，往深了挖是模型的行为边界没搞清楚。举几个例子：长上下文方案该硬塞还是做检索，取决于模型训练时的序列长度和位置编码是怎么设计的；推理成本和并发吞吐，取决于 KV cache 随序列怎么增长。再往下还有 tokenizer 的切分方式，它直接决定工具调用参数里那些空格和转义长什么样。
 
-这些问题的答案都在模型内部。我之前也把 LLM 当魔法黑盒 API，模型不听话的时候就靠试。理解了底层，至少知道该往哪个方向试。说白了，Agent 和 harness 工程的上限，取决于你对模型行为的预判能力。
-
-下面进入正题。
+这些问题的答案都在模型内部。把 LLM 当魔法黑盒 API，模型不听话的时候只能靠试；理解了底层，至少知道该往哪个方向试。说白了，Agent 和 harness 工程的上限，取决于对模型行为的预判能力。
 
 ## 1. 两个仓库
 
-我把学习分成两条线。[cs336-study](https://github.com/fengye404/cs336-study) 是我自己写的小 lab，每个只解决一个小问题，代码短，跑完马上能看到 shape 和数字。[cs336-assignment](https://github.com/fengye404/cs336-assignment) 放官方作业的正式实现。
+学习材料分两层。[cs336-study](https://github.com/fengye404/cs336-study) 是配套的小 lab，每个只解决一个小问题，代码短，跑完马上能看到 shape 和数字；[cs336-assignment](https://github.com/fengye404/cs336-assignment) 放官方作业的正式实现。
 
-不直接开 assignment 的原因很简单：A1 的脚手架很少，拿到手就是一堆测试加一个 PDF，很容易懵。先在 lab 里用简化版本把每个组件过一遍，再回去写正式实现，精力才能放在设计取舍上，不至于卡在某个 shape 里。
+不直接开 assignment 的原因很简单：A1 的脚手架很少，拿到手就是一堆测试加一个 PDF，容易懵。先在 lab 里用简化版本把每个组件过一遍，再回去写正式实现，精力才能放在设计取舍上，不至于卡在某个 shape 里。
 
-这篇按这个顺序来：MLP 热身，TinyGPT 搭骨架，然后对照 A1 换零件。
+后面的顺序：MLP 热身，TinyGPT 搭骨架，对照 A1 换零件。
 
 ## 2. 先用 MLP 把训练回路跑通
 
@@ -76,7 +74,7 @@ loss.backward()                     # 反向
 optimizer.step()                    # 更新
 ```
 
-后面所有 LLM 训练代码都是这四步的重复，换的是数据和模型。
+后面所有 LLM 训练代码都是这四步的重复，换的只是数据和模型。
 
 800 步跑完，真实输出：
 
@@ -87,11 +85,13 @@ step 0300 | train_loss=0.06590 | val_loss=0.64648
 step 0800 | train_loss=0.00640 | val_loss=0.24745
 ```
 
-train loss 一路降到 0.0064，val loss 在 100 步左右探到最低点，之后开始上下弹。模型把噪声也一起拟合了。训练语言模型时日志里两个 loss 要分开看，最早的直觉就是从这种小实验里来的。`zero_grad` 漏掉的话梯度会一直累积，loss 曲线变得没法解释，这个实验里故意留了注释讲这件事。
+train loss 一路降到 0.0064，val loss 在 100 步左右探到最低点，之后开始上下弹。模型把噪声也一起拟合了。训练语言模型时日志里两个 loss 要分开看，最早的直觉就来自这种小实验。`zero_grad` 那一行漏掉，梯度会一直累积，后面的 loss 曲线基本就是玄学。
 
 ## 3. TinyGPT：能跑的最小骨架
 
-第二个 lab（`week-05-tiny-gpt`）把整套结构搭起来。语料是一段重复 40 次的小文本，字符级 tokenizer，词表 23。结构和 GPT-2 一个路子：token embedding 加位置 embedding，过两层 block，最后 LM head 出 logits。
+第二个 lab（`week-05-tiny-gpt`）把整套结构搭起来。语料是一段重复 40 次的小文本，字符级 tokenizer，词表 23。整体数据流：
+
+![Transformer 整体数据流](arch.svg)
 
 attention 一次投影算出 qkv，拆多头，下三角 mask 挡住未来：
 
@@ -129,7 +129,7 @@ anguage models predich tokens from previous tokens. attention lets each token re
 earlier tokens. agents plan actions observe results and update context. language models pre
 ```
 
-这里得诚实：语料本身重复了 40 次，0.10 基本是背下来的，不代表学会了。这个 lab 的意义在于验证 shape 和梯度路径是通的。
+这个 0.10 有水分：语料本身重复了 40 次，模型基本是背下来的，不代表学会了。这个 lab 的意义在于验证 shape 和梯度路径是通的。
 
 能跑归能跑，这个骨架用的是 `nn.Linear`、`nn.LayerNorm`、可学习位置编码和 GELU，属于 GPT-2 那一代的默认搭配。A1 要的是现在主流的结构。
 
@@ -149,9 +149,9 @@ earlier tokens. agents plan actions observe results and update context. language
 
 残差和 pre-LN 不用动，骨架是好的。
 
-作业不让用 `nn.Linear` 这些现成的，就是要你把初始化、bias、dtype 过一遍。这些细节平时被藏起来，调模型的时候又恰恰是最容易出问题的地方。
+作业不让用 `nn.Linear` 这些现成的，就是要亲手把初始化、bias、dtype 过一遍。这些细节平时被藏起来，调模型的时候又恰恰是最容易出问题的地方。
 
-A1 的代码我写得很慢，`model.py` 里注释比代码多。RoPE 那段，我先把旋转矩阵推一遍，再拆成两两配对，最后才落成逐元素公式。写一遍比看十遍有用。
+`cs336-assignment` 里的 `model.py` 注释比代码多。RoPE 那段，旋转矩阵推一遍、两两配对拆一遍，最后才落成逐元素公式。
 
 ## 5. Linear 和 Embedding
 
@@ -190,7 +190,7 @@ class Embedding(nn.Module):
         return self.weight[token_ids]
 ```
 
-这种手动控制初始化的写法，让我想起刚学 Java 那会调线程池参数。`corePoolSize` 和 `maxPoolSize` 也是两个数各管一段，配错了表面也能跑，压力上来才出问题。初始化一个道理，前几百步看不出差别，步数多了才分高下。
+初始化是慢变量：前几百步看不出差别，步数多了才分高下。
 
 ## 6. RMSNorm
 
@@ -217,6 +217,8 @@ class RMSNorm(nn.Module):
 ## 7. RoPE
 
 TinyGPT 的位置信息是查表来的。RoPE（Rotary Position Embedding，来自 RoFormer）换了个思路：把 q 和 k 的每两个分量当成复平面上的一个点，按 token 的位置旋转一个角度。
+
+![RoPE 的旋转示意](rope.svg)
 
 位置 m 的旋转角是 `m * θ`，位置 n 的旋转角是 `n * θ`，两个向量做点积时角度相减，只剩 `(m - n) * θ`。结果只跟相对距离有关。语料里"前一个词"这种关系，不应该因为句子变长就改变。
 
@@ -281,7 +283,7 @@ def softmax(x, dim=-1):
 
 softmax 对输入整体加常数不变，减最大值不改变结果，纯粹为了数值稳定。
 
-attention 的公式是 `softmax(QKᵀ / sqrt(d_k)) V`。这个 `sqrt(d_k)` 不能省：Q 和 K 的每个分量独立时，点积的方差随 `d_k` 线性增长，不缩放 softmax 会被推到饱和区，梯度接近 0。开方之后方差回到 1 附近。
+Attention 可以理解成一次带权重的投票：每个 token 决定从哪些历史 token 里各取多少信息。公式是 `softmax(QKᵀ / sqrt(d_k)) V`。这个 `sqrt(d_k)` 不能省：Q 和 K 的每个分量独立时，点积的方差随 `d_k` 线性增长，不缩放 softmax 会被推到饱和区，梯度接近 0。开方之后方差回到 1 附近。
 
 因果 mask 是下三角，第 t 个位置只能看 1 到 t：
 
@@ -296,7 +298,11 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 
 被掩掉的位置填 `-inf`，softmax 之后就是 0。前提是每行至少有一个位置可见，因果 mask 的对角线保证了这个前提。上 padding mask 的时候要小心，整行全 `-inf` 会算出 nan。
 
-多头就是把上面这套并行跑 H 份。TinyGPT 里 qkv 是一次投影出来的，A1 拆成了三个 Linear，对照公式更直观：
+多头就是把上面这套并行跑 H 份：
+
+![Attention 的形状流转](attention-shapes.svg)
+
+TinyGPT 里 qkv 是一次投影出来的，A1 拆成了三个 Linear，对照公式更直观：
 
 ```python
 class MultiheadSelfAttention(nn.Module):
@@ -377,7 +383,11 @@ class GELUFFN(nn.Module):
 
 ## 10. 组装完整模型
 
-block 是 Attention 和 FFN 各带一层残差，pre-norm。为了 ablation 方便，我留了几个开关，不用来回改代码：
+block 是 Attention 和 FFN 各带一层残差，pre-norm：
+
+![pre-norm 残差结构](block.svg)
+
+为了 ablation 方便，代码里留了几个开关，不用来回改：
 
 ```python
 class TransformerBlock(nn.Module):
@@ -446,7 +456,7 @@ class TransformerLM(nn.Module):
 
 ## 12. 训练
 
-数据先不折腾 tokenizer，直接按字节读，每个字节一个 token，词表 256。字节级序列长、效率低，跑通结构足够了。
+数据先不折腾 tokenizer，直接按字节读，每个字节一个 token，词表 256。字节级编码很土，但够用。
 
 ```python
 with open("TinyStoriesV2-GPT4-valid.txt", "rb") as f:
@@ -483,7 +493,7 @@ def lr_at(step, max_lr, min_lr, warmup_steps, total_steps):
     return min_lr + 0.5 * (max_lr - min_lr) * (1 + math.cos(math.pi * progress))
 ```
 
-正式训练前做两个便宜检查。固定一个 batch 反复训，模型能把它背下来：batch 8、序列 128，200 步 loss 从 6.06 到 0.0000。这一步能过滤掉大半低级错误，loss 卡在 5.5 附近不动，去查标签有没有右移、mask 有没有写反；loss 变 nan，去查初始化和 mask。另一个是因果性，把序列后半段改掉，前半段 logits 不能变：
+正式训练前做两个便宜检查。固定一个 batch 反复训，模型能把它背下来：batch 8、序列 128，200 步 loss 从 6.06 到 0.0000。这一步能过滤掉大半低级错误，loss 卡在 5.5 附近不动，基本可以断定模型在瞎猜，去查标签有没有右移、mask 有没有写反；loss 变 nan，去查初始化和 mask。另一个是因果性，把序列后半段改掉，前半段 logits 不能变：
 
 ```python
 x2 = x.clone()
@@ -512,7 +522,7 @@ for step in range(total_steps):
 
 `betas=(0.9, 0.95)` 把第二矩的衰减调低了。Transformer 梯度分布比较尖，默认 0.999 反应太慢。warmup 100 步再余弦退火，梯度裁剪 1.0 防止个别 batch 把参数带飞。
 
-后来在 CPU 上跑了 600 步，loss 从 5.98 到 1.06：
+同一套配置在 CPU 上跑 600 步，loss 从 5.98 到 1.06：
 
 ```text
 step     0 | loss 5.9772 | lr 1.00e-05
@@ -538,7 +548,7 @@ A1 要求做四组消融。开关都留好了，同一份数据、同一个种�
 | GELU FFN（参数对齐） | `use_swiglu=False`，d_ff=1024 | 1.022 | 差异也在噪声里 |
 | GELU FFN（d_ff 没对齐） | `use_swiglu=False`，d_ff=704 | 1.191 | 参数少了两成，不能直接比 |
 
-有两个结果出乎我的意料。
+有两个结果和直觉不一样。
 
 去掉 RMSNorm 之后，第 0 步的 loss 是 42.7，基线是 5.98。没有归一化，初始 logits 就是一团乱麻。但它很快就追平了，600 步后和基线持平。RMSNorm 在这个规模下的价值主要是训练早期把数值稳住，更深、学习率更大的时候，它避免的可能是直接发散。
 
@@ -548,9 +558,9 @@ post-norm 在这轮里反而略好一点（1.031 对 1.061）。讲义里说它�
 
 几百步的差异里噪声占比不小，同一配置换个种子，差别可能比配置之间还大。想判断某个设计有没有用，要么固定种子多跑几组，要么把步数拉长。看单次结果下结论，容易翻车。
 
-## 14. 踩过的坑
+## 14. 几个坑
 
-**RoPE 的广播**。印象最深的一个。`token_positions` 是 `(B, S)`，q 是 `(B, H, S, d)`，cos/sin 算出 `(B, S, d)`，直接乘只有 batch=1 能跑。batch 一到 2 就报错。修法是补一个 head 维：`token_positions.unsqueeze(1)`，让 cos/sin 变成 `(B, 1, S, d)` 再乘。
+**RoPE 的广播**。最隐蔽的一个。`token_positions` 是 `(B, S)`，q 是 `(B, H, S, d)`，cos/sin 算出 `(B, S, d)`，直接乘只有 batch=1 能跑；batch 一到 2 立刻翻脸。修法是补一个 head 维：`token_positions.unsqueeze(1)`，让 cos/sin 变成 `(B, 1, S, d)` 再乘。
 
 **RMSNorm 的 fp32**。bf16 下平方和精度不够，几百步后 loss 会抖。归一化内部 upcast 到 fp32 再转回来，能压住大部分精度问题。
 
@@ -562,13 +572,9 @@ post-norm 在这轮里反而略好一点（1.031 对 1.061）。讲义里说它�
 
 ## 后记
 
-写完这套代码，Transformer 对我最大的变化是从"论文里的图"变成了"一堆可以拆开的零件"。每个零件都在回答一个具体问题：初始化为的是训练起步不发散，RMSNorm 为的是尺度稳定，RoPE 为的是相对位置，mask 为的是不能偷看未来。
+系统学习一门课程的机会并不多。上一次类似的体验还是 MIT 6.824 的 lab：看文档、写代码、跑测试，把分布式系统从纸上搬进终端。CS336 的感觉很像，只是验证标准从测试用例变成了 loss 曲线，调试对象从网络分区变成了张量形状。
 
-没有哪个是魔法。
-
-我已经很久没有这样系统学习一门课程了。上一次类似的体验，还是跟着 MIT 6.824 做 lab：看文档、写代码、跑测试，把分布式系统从纸上搬进终端。这次做 CS336 的感觉很像，只是验证标准从测试用例变成了 loss 曲线，调试对象从网络分区变成了张量形状。
-
-如果你也在学 CS336，或者想从工程方向往 Agent 深入一点，希望这篇能帮你省点时间。下一篇写 tokenizer，BPE 的合并逻辑比 attention 更绕，值得单独讲。
+正在学 CS336、或者想从工程方向往 Agent 深入的读者，希望这篇能省点时间。下一篇写 tokenizer，BPE 的合并逻辑比 attention 更绕，值得单独讲。
 
 ---
 
@@ -576,8 +582,8 @@ post-norm 在这轮里反而略好一点（1.031 对 1.061）。讲义里说它�
 
 - [CS336: Language Modeling from Scratch](https://cs336.stanford.edu/)
 - [Assignment 1: Basics](https://github.com/stanford-cs336/assignment1-basics/tree/main)
-- [我的 lab 仓库 cs336-study](https://github.com/fengye404/cs336-study)
-- [我的 A1 实现 cs336-assignment](https://github.com/fengye404/cs336-assignment)
+- [cs336-study（lab 仓库）](https://github.com/fengye404/cs336-study)
+- [cs336-assignment（A1 实现）](https://github.com/fengye404/cs336-assignment)
 - [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864)
 - [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467)
 - [GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202)

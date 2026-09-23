@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#57606a"/>
+    </marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="759" height="439" rx="10" fill="#fafbfc" stroke="#d0d7de"/>
+
+  <rect x="280" y="26" width="200" height="42" rx="8" fill="#ffffff" stroke="#8c959f"/>
+  <text x="380" y="47" text-anchor="middle" dominant-baseline="middle" font-size="14" fill="#24292f">token ids (B, S)</text>
+
+  <line x1="380" y1="68" x2="380" y2="102" stroke="#57606a" marker-end="url(#a)"/>
+  <text x="392" y="85" font-size="12" fill="#57606a" dominant-baseline="middle">Embedding</text>
+
+  <rect x="280" y="102" width="200" height="42" rx="8" fill="#ffffff" stroke="#8c959f"/>
+  <text x="380" y="123" text-anchor="middle" dominant-baseline="middle" font-size="14" fill="#24292f">(B, S, D)</text>
+
+  <line x1="380" y1="144" x2="380" y2="178" stroke="#57606a" marker-end="url(#a)"/>
+  <text x="392" y="161" font-size="12" fill="#57606a" dominant-baseline="middle">N ×</text>
+
+  <rect x="150" y="178" width="460" height="150" rx="10" fill="#f0f6ff" stroke="#0969da" stroke-dasharray="6 4"/>
+  <text x="380" y="199" text-anchor="middle" font-size="13" fill="#0969da">Transformer Block（pre-norm）</text>
+
+  <rect x="180" y="218" width="92" height="32" rx="6" fill="#ffffff" stroke="#8c959f"/>
+  <text x="226" y="234" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#24292f">RMSNorm</text>
+  <line x1="272" y1="234" x2="298" y2="234" stroke="#57606a" marker-end="url(#a)"/>
+  <rect x="298" y="218" width="104" height="32" rx="6" fill="#ffffff" stroke="#8c959f"/>
+  <text x="350" y="234" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#24292f">Attention</text>
+  <line x1="402" y1="234" x2="430" y2="234" stroke="#57606a" marker-end="url(#a)"/>
+  <circle cx="446" cy="234" r="13" fill="#ffffff" stroke="#0969da"/>
+  <text x="446" y="234" text-anchor="middle" dominant-baseline="middle" font-size="14" fill="#0969da">+</text>
+  <text x="468" y="234" font-size="11" fill="#57606a" dominant-baseline="middle">残差</text>
+
+  <rect x="180" y="272" width="92" height="32" rx="6" fill="#ffffff" stroke="#8c959f"/>
+  <text x="226" y="288" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#24292f">RMSNorm</text>
+  <line x1="272" y1="288" x2="298" y2="288" stroke="#57606a" marker-end="url(#a)"/>
+  <rect x="298" y="272" width="104" height="32" rx="6" fill="#ffffff" stroke="#8c959f"/>
+  <text x="350" y="288" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#24292f">SwiGLU</text>
+  <line x1="402" y1="288" x2="430" y2="288" stroke="#57606a" marker-end="url(#a)"/>
+  <circle cx="446" cy="288" r="13" fill="#ffffff" stroke="#0969da"/>
+  <text x="446" y="288" text-anchor="middle" dominant-baseline="middle" font-size="14" fill="#0969da">+</text>
+  <text x="468" y="288" font-size="11" fill="#57606a" dominant-baseline="middle">残差</text>
+
+  <line x1="380" y1="328" x2="380" y2="362" stroke="#57606a" marker-end="url(#a)"/>
+
+  <rect x="250" y="362" width="260" height="52" rx="8" fill="#ffffff" stroke="#8c959f"/>
+  <text x="380" y="380" text-anchor="middle" dominant-baseline="middle" font-size="13" fill="#24292f">RMSNorm → lm_head</text>
+  <text x="380" y="400" text-anchor="middle" dominant-baseline="middle" font-size="12" fill="#57606a">logits (B, S, V)</text>
+</svg>
