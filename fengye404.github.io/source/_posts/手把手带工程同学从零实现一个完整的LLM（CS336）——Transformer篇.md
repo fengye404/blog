@@ -40,7 +40,7 @@ tags:
 
 ## 1. 两个仓库
 
-学习材料分两层。[cs336-study](https://github.com/fengye404/cs336-study) 是我自己搭的小 lab 仓库，每个 lab 只解决一个小问题，代码短，跑完马上能看到 shape 和数字；[cs336-assignment](https://github.com/fengye404/cs336-assignment) 放官方作业的正式实现和测试。
+学习材料分两层。[cs336-study](https://github.com/fengye404/cs336-study) 是我自己搭的小 lab 仓库，每个 lab 只解决一个小问题，代码短，跑完马上能看到 shape 和数字；[cs336-assignment](https://github.com/fengye404/cs336-assignment) 放官方作业的正式实现。
 
 不直接开 assignment 的原因很简单：A1 的脚手架很少，拿到手就是一个 PDF 加一堆测试，容易懵。先在 lab 里把每个组件的简化版过一遍，再回去写正式实现，精力才能放在设计取舍上，不至于卡在某个 shape 里。
 
@@ -125,54 +125,70 @@ earlier tokens. agents plan actions observe results and update context. language
 
 能跑归能跑，这个骨架用的是 `nn.Linear`（带 bias）、`nn.LayerNorm`、可学习位置编码和 GELU，属于 GPT-2 那一代的默认搭配。A1 的要求不一样：基础模块全部手写，并且换上 RMSNorm、RoPE 和 SwiGLU。接下来先解决模型的输入问题——文本怎么变成 token。
 
-## 4. 从 UTF-8 到 BPE：文本怎么变成 token
+## 4. 文本编码与 Tokenizer
 
-TinyGPT 用字符级 tokenizer 热身，一个字符一个 ID，写起来方便。正式模型要处理英文、中文、标点、空格，还有没出现过的新词。直接给每个 Unicode 字符分配 ID，词表会爆炸；按完整单词切，总有词表外的词。CS336 A1 用的是 byte-level BPE：从 256 个单字节值起步，从语料里统计学习常见的字节组合。
+### 字符、Unicode 与 UTF-8
 
-### 字符和字节先分清
+计算机底层只有 0 和 1，要显示字符得先定义「哪个数字代表哪个字符」。ASCII 用一个字节给 127 个字符编号；Unicode 把这个事做到全球，给 15 万+ 字符各分配一个唯一编号，叫码点（code point）。比如 `A` 的码点是 65，「中」的码点是 20013。
 
-ASCII 的 `A` 在 UTF-8 里占一个字节；汉字「中」编码后是 `E4 B8 AD`，占三个字节：
+码点只是编号，还得规定编号怎么存成字节。UTF-8 是一种变长编码：码点小的字符省空间，ASCII 占一个字节，汉字一般占三个字节。以「中」为例：
 
 ```python
+>>> ord("中")
+20013
 >>> list("中".encode("utf-8"))
 [228, 184, 173]
 ```
 
-Python 的 `str` 是字符序列，`bytes` 才是编码后的字节序列。BPE 的初始词表就是 `0..255` 这 256 个单字节 token——任何 UTF-8 文本都一定能拆成这些 token，后面学到的 token 可以对应多个字节，也可以横跨几个字符。
+Python 的 `str` 是字符序列，`encode("utf-8")` 之后才是字节序列。「中」编码后是 `E4 B8 AD` 三个字节，任何 UTF-8 文本都一定能拆成单字节——这正是 byte-level BPE 的底气：初始词表只要 256 个单字节 token，就能覆盖所有文本。
 
-token、字符、字节是三种不同的单位。以后说上下文长度 128，数的是 token，不能直接理解成 128 个字或者 128 个 byte。做 Agent 上下文预算的时候，这个换算天天要用。
+字符、字节、还有马上会讲到的 token，是三种不同的单位。以后说模型上下文长度是 128，数的是 token，不能直接理解成 128 个字或者 128 个 byte。做 Agent 上下文预算的时候，这个换算天天要用。
 
-### 先预分词，再学合并规则
+### BPE：预分词与合并规则
 
-A1 给了一条 GPT-2 风格的正则做预分词，把文本先切成带前导空格的单词、数字、标点等片段，BPE 只在片段内部合并：
+能不能绕过字符，直接把 UTF-8 字节喂给模型？词表确实小了，但序列会变得非常长：`Transformer` 一个单词就是 11 个字节，而 attention 的计算量随序列长度平方增长。Tokenizer 的作用是在「词表大小」和「序列长度」之间找平衡——把常见的字节组合打包成一个 token，本质是对文本的压缩。
+
+BPE（Byte-Pair Encoding）从 256 个单字节 token 起步，统计语料里哪些字节组合最值得合并。它的「训练」是频次统计，产物只是一张合并规则表，和神经网络的梯度训练是两码事。
+
+合并之前先做预分词。A1 给了一条 GPT-2 风格的正则，把文本先切成带前导空格的单词、数字、标点等片段，BPE 只在片段内部合并：
 
 ```python
 PATTERN = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 ```
 
-预分词的作用是防止学到跨语义边界的合并——没有它，"您好 人没了" 里可能切出 "好 人" 这种横跨两个词的 token。
+预分词是为了防止学到跨语义边界的合并——没有它，"您好 人没了" 里可能切出 "好 人" 这种横跨两个词的 token。
 
-训练时先数每种 pre-token 出现多少次，再转成 UTF-8 字节序列。这里有个容易算错的地方：假设片段 `abab` 出现 5 次，序列是 `(a, b, a, b)`，pair `(a, b)` 在这个片段里出现 2 次，给全局计数贡献的是 10 次，不是 2 次。只数一次就把语料频率丢了，合并顺序也会跟着变。
+训练时先数每种 pre-token 出现多少次，再转成 UTF-8 字节序列。这里有个容易算错的地方：假设片段 `abab` 出现 5 次，序列是 `(a, b, a, b)`，pair `(a, b)` 在片段里出现 2 次，给全局计数贡献的是 10 次，不是 2 次。只数一次就把语料频率丢了，合并顺序也会跟着变。
 
-之后每轮找计数最高的相邻 pair，拼成新 token，记录进 `vocab` 和 `merges`，再更新所有片段的 token 序列。`merges` 的顺序必须留住：编码新文本时要按学习时的顺序重放。同频次的时候 A1 规定了字典序的 tie-breaking，这种细节拿一个极小的样例测最稳。
+之后每轮找计数最高的相邻 pair，拼成新 token，记录进 `vocab` 和 `merges`，再更新所有片段的 token 序列。`merges` 的顺序必须留住：编码新文本时要按学习时的顺序重放。同频次的时候 A1 规定了字典序的 tie-breaking，这种细节值得拿小样例走一遍。
 
 特殊 token 是另一个坑。以 `<|endoftext|>` 为例，它表示文档边界，必须作为整体进词表：训练前先按它把文本切开，内部不参与 pair 统计，两侧也不允许合并。边界不能跨。
 
-我在作业自带的测试语料上跑了一遍自己的实现：vocab 500，学到 243 条 merge，前几条依次是 `(" ","t")`、`(" ","a")`、`("h","e")`，第 5 条已经把 `" t"` 和 `"he"` 合成 `" the"`。能看出来高频组合先被学走，词表确实在压缩文本。
+我在作业自带的示例语料上跑了一遍自己的实现：vocab 500，学到 243 条 merge，前几条依次是 `(" ","t")`、`(" ","a")`、`("h","e")`，第 5 条已经把 `" t"` 和 `"he"` 合成 `" the"`。高频组合先被学走，词表确实在压缩文本。
 
-但正确性过了不代表完事。A1 的速度测试要求这份语料的训练在 1.5 秒内跑完，我当前的直接实现要 3 秒多——每轮都重新统计全部 pair，`test_train_bpe_speed` 挂了。先写对再优化，优化方向也明确：并行预分词、增量更新 pair 计数。这个坑留到后面填。
-
-### 训练完词表，还要能编码和解码
+### Tokenizer 的封装：编码与解码
 
 `train_bpe` 的产出是 `vocab`（ID → bytes）和有序的 `merges`。给定新文本，encode 的流程是：先识别特殊 token，再做同样的预分词，普通片段拆成单字节 token，按 `merges` 顺序重放合并，最后查词表得到整数 ID。decode 反过来：ID 找回 bytes，全部拼起来之后统一做 UTF-8 解码。
 
-decode 有个细节：别逐 token 解码。一个 token 的 bytes 可能只是某个汉字 UTF-8 编码的一半，单独解码直接报错。先拼全部 bytes，遇到非法序列按作业要求用替代字符处理。大文件还要用 `encode_iterable` 流式产出 ID，不能一次把全文读进内存。
+decode 有个细节：别逐 token 解码。一个 token 的 bytes 可能只是某个汉字 UTF-8 编码的一部分——三字节汉字完全可能被切成两个 token，单独解码直接报错。先拼全部 bytes，遇到非法序列按作业要求用替代字符处理。大文件还要用 `encode_iterable` 流式产出 ID，不能一次把全文读进内存。
 
-到这里，原始文本已经变成模型能接收的整数序列。我自己用英文、中文、混排 `<|endoftext|>` 的文本验证了往返编码一致，A1 的 tokenizer 测试也通过了。接下来轮到 Transformer 本体。
+到这里，原始文本变成了模型能接收的整数序列。接下来轮到 Transformer 本体。
 
-## 5. 对照 A1：给 TinyGPT 换零件
+## 5. Transformer 模块串讲：先看整条数据流
 
-把 TinyGPT 和 A1 的要求列出来，差异就几处：
+进组件之前，先把 decoder-only 语言模型的整条前向通路摆出来：
+
+```text
+输入 token IDs        (B, S)
+→ Embedding           (B, S, D)
+→ Transformer Block×L (B, S, D)
+→ RMSNorm             (B, S, D)
+→ LM head             (B, S, V)
+```
+
+`B` 是 batch，`S` 是序列长度，`D` 是模型宽度，`V` 是词表大小。token ID 先查表变成向量；中间 `L` 个 block 反复加工，形状始终是 `(B, S, D)`；最后归一化，LM head 把每个位置的向量映射成词表上的分数。输出的 `(B, S, V)` 就是 TinyGPT 那节见过的 logits。
+
+block 里只有两类东西：attention 负责 token 之间交换信息，FFN 负责对每个位置单独加工，归一化和残差连接把它们包起来。和 TinyGPT 对照，A1 要换的零件就这几处：
 
 | 组件 | TinyGPT（lab） | Assignment1（要手写） | 换的原因 |
 |------|---------------|----------------------|---------|
@@ -185,9 +201,26 @@ decode 有个细节：别逐 token 解码。一个 token 的 bytes 可能只是�
 
 残差和 pre-norm 的布局不用动，骨架是好的。作业要求自己写 Linear、Embedding、softmax 这些基础操作——初始化、bias、dtype 这些平时被框架藏起来的细节，自己写一次才知道哪里会出问题。`cs336-assignment` 里的 `model.py` 注释比代码多，RoPE 那段我先把旋转矩阵推了一遍，再拆成两两配对，最后才落成逐元素公式。
 
-## 6. Linear 和 Embedding
+## 6. Embedding 和 Linear
 
-Linear 在这份作业里只有矩阵乘法和受控初始化，没有 bias：
+Embedding 就是一张查找表。词表大小 `V`，每个 token 的向量维度是 `D`，表本身就是 `(V, D)`：
+
+```python
+class Embedding(nn.Module):
+    def __init__(self, vocab_size, d_model, device=None, dtype=None):
+        super().__init__()
+        self.embedding = nn.Parameter(
+            torch.empty(vocab_size, d_model, device=device, dtype=dtype)
+        )
+        nn.init.trunc_normal_(self.embedding, mean=0.0, std=1.0, a=-3.0, b=3.0)
+
+    def forward(self, token_ids):
+        return self.embedding[token_ids]
+```
+
+输入 `(B, S)` 的 token ID，查完表变成 `(B, S, D)`。这张表初始时不含任何「语义」，里面的向量全靠训练更新。
+
+Linear 负责向量维度的投影，Q/K/V、FFN、LM head 里全是它。这份作业里它只有矩阵乘法和受控初始化，没有 bias：
 
 ```python
 class Linear(nn.Module):
@@ -205,44 +238,7 @@ class Linear(nn.Module):
 
 初始化标准差按作业公式取 `sqrt(2 / (d_in + d_out))`，截断在 ±3σ。权重形状是 `(out_features, in_features)`，前向时要转置——PyTorch 里向量按行存，`y = x @ W.T`。输入前面带多少 batch 维都行，矩阵乘法只作用在最后一维。
 
-Embedding 就是一张查找表：
-
-```python
-class Embedding(nn.Module):
-    def __init__(self, vocab_size, d_model, device=None, dtype=None):
-        super().__init__()
-        self.embedding = nn.Parameter(
-            torch.empty(vocab_size, d_model, device=device, dtype=dtype)
-        )
-        nn.init.trunc_normal_(self.embedding, mean=0.0, std=1.0, a=-3.0, b=3.0)
-
-    def forward(self, token_ids):
-        return self.embedding[token_ids]
-```
-
-输入 `(B, S)` 的 token ID，查完表变成 `(B, S, D)`。这张表初始时不含任何「语义」，里面的向量全靠训练更新。
-
-## 7. RMSNorm
-
-归一化做两件事：把激活值的尺度拉回来，再乘一个可学习的缩放。LayerNorm 减均值、除标准差；RMSNorm 省掉减均值，也没有 bias，只按最后一维算均方根：
-
-```python
-class RMSNorm(nn.Module):
-    def __init__(self, d_model, eps=1e-5, device=None, dtype=None):
-        super().__init__()
-        self.eps = eps
-        self.weight = nn.Parameter(torch.ones(d_model, device=device, dtype=dtype))
-
-    def forward(self, x):
-        in_dtype = x.dtype
-        x = x.to(torch.float32)
-        rms = torch.sqrt(x.pow(2).mean(dim=-1, keepdim=True) + self.eps)
-        return ((x / rms) * self.weight).to(in_dtype)
-```
-
-输入输出都是 `(B, S, D)`，形状不变。平方、均值、缩放先在 fp32 里算，再转回输入 dtype——低精度训练时，这一步能减少归一化环节的数值误差。作业 PDF 明确要求这个 upcast，照做就是。
-
-## 8. Attention
+## 7. Attention 与因果多头自注意力
 
 先看 softmax。实现时先减最大值再算指数：
 
@@ -257,7 +253,7 @@ softmax 对整体平移不变，减最大值不改变结果，纯粹为了数值
 
 Attention 可以理解成一次带权重的投票：每个 token 决定从哪些历史 token 各取多少信息。公式是 `softmax(QKᵀ / √d_k) V`。`√d_k` 不能省：Q 和 K 的分量近似独立时，点积的方差随 `d_k` 线性增长，不缩放的话 softmax 被推到饱和区，梯度接近 0。除以 `√d_k` 之后方差回到 1 附近。
 
-因果 mask 是下三角，第 t 个位置只能看到 1 到 t：
+语言模型不能偷看未来。因果 mask 是下三角，第 t 个位置只能看到 1 到 t：
 
 ```python
 def scaled_dot_product_attention(Q, K, V, mask=None):
@@ -270,11 +266,11 @@ def scaled_dot_product_attention(Q, K, V, mask=None):
 
 被掩掉的位置填 `-inf`，softmax 之后权重就是 0。前提是每行至少有一个可见位置——因果 mask 的对角线保证了这一点。以后自己加 padding mask 要小心，整行全 `-inf` 会算出 nan。
 
-多头就是把这套并行跑 H 份：
+多头就是把这套并行跑 `H` 份，每个 head 分到 `d_k = D / H` 的宽度，各自学不同的关系：
 
 ![Attention 的形状流转](attention-shapes.svg)
 
-TinyGPT 把 qkv 放在一次投影里算，A1 拆成三个 Linear，对照公式更直观。设 `D` 是模型宽度，`H` 是 head 数，`d_k = D / H`，形状流转是：
+TinyGPT 把 qkv 放在一次投影里算，A1 拆成三个 Linear，对照公式更直观。形状流转是：
 
 ```text
 x:       (B, S, D)
@@ -286,7 +282,7 @@ scores:  (B, H, S, S)
 
 拆多头时先把最后一维分成 `(H, d_k)`，再把 `H` 转到序列维前面；算完 attention 再转回来，过输出 Linear。把这几个 shape 标在代码旁边，比背公式更能防错。
 
-## 9. RoPE：把位置旋进 q 和 k
+## 8. RoPE：把位置旋进 q 和 k
 
 TinyGPT 的位置信息是查表查来的。RoPE（Rotary Position Embedding，来自 RoFormer）换了个思路：把 q 和 k 的每两个分量当成二维平面上的一个点，按 token 的位置旋转一个角度。
 
@@ -341,9 +337,9 @@ b = (qr[0, 0, 5] * kr[0, 0, 4]).sum()
 torch.testing.assert_close(a, b)   # 验证通过
 ```
 
-然后说我踩的坑。RoPE 只作用在 q 和 k 上，v 不旋转。接回多头 attention 时，位置下标是 `(B, S)`，q/k 是 `(B, H, S, d_k)`。直接拿 `(B, S)` 去查 cos/sin 表，得到 `(B, S, d_k)`，和 `(B, H, S, d_k)` 做逐元素乘时，B 和 H 两个轴会对撞。官方测试里 pos_ids 被整理成 `(1, seq)`，batch 是 1，广播恰好能过，所以测试全绿；我自己把 batch 加到 2 跑一次，立刻报 `The size of tensor a (4) must match the size of tensor b (2)`。修法是在查表前给位置下标补一个 head 轴，变成 `(B, 1, S)`，让 cos/sin 广播到所有 head。坑在这里。batch 等于 1 能跑通，把这个问题的暴露推迟到了真正训练之前。
+最后说一个形状上的坑。RoPE 只作用在 q 和 k 上，v 不旋转。接回多头 attention 时，位置下标是 `(B, S)`，q/k 是 `(B, H, S, d_k)`：直接拿 `(B, S)` 查 cos/sin 表得到 `(B, S, d_k)`，和 `(B, H, S, d_k)` 逐元素乘，B 和 H 两个轴会对撞。正确做法是查表前给位置下标补一个 head 轴，变成 `(B, 1, S)`，让 cos/sin 广播到所有 head。坑在这里。batch 等于 1 的时候广播恰好能过，这个错误的暴露很容易被推迟到真正训练之前。
 
-## 10. SwiGLU：每个位置自己的前馈网络
+## 9. SwiGLU：每个位置自己的前馈网络
 
 Attention 负责 token 之间的信息交换，block 里还需要一条对每个位置分别工作的前馈网络。原始 Transformer 用两层 Linear 加 ReLU；A1 用 SwiGLU，多一条门控分支：
 
@@ -361,7 +357,27 @@ def forward(self, x):
 
 为什么 `d_ff` 常取约 `8D/3`？传统两层 FFN 隐藏宽度取 `4D` 时，两个矩阵约 `8D²` 个参数；SwiGLU 有三个矩阵，`d_ff` 取 `8D/3` 时也约是 `8D²`。参数量对齐了，不同 FFN 之间才好公平比较。实际实现还会把宽度取整到 64 的倍数。
 
-## 11. 把 block 和完整模型装起来
+## 10. RMSNorm
+
+归一化做两件事：把激活值的尺度拉回来，再乘一个可学习的缩放。LayerNorm 减均值、除标准差；RMSNorm 省掉减均值，也没有 bias，只按最后一维算均方根：
+
+```python
+class RMSNorm(nn.Module):
+    def __init__(self, d_model, eps=1e-5, device=None, dtype=None):
+        super().__init__()
+        self.eps = eps
+        self.weight = nn.Parameter(torch.ones(d_model, device=device, dtype=dtype))
+
+    def forward(self, x):
+        in_dtype = x.dtype
+        x = x.to(torch.float32)
+        rms = torch.sqrt(x.pow(2).mean(dim=-1, keepdim=True) + self.eps)
+        return ((x / rms) * self.weight).to(in_dtype)
+```
+
+输入输出都是 `(B, S, D)`，形状不变。平方、均值、缩放先在 fp32 里算，再转回输入 dtype——低精度训练时，这一步能减少归一化环节的数值误差。作业 PDF 明确要求这个 upcast，照做就是。
+
+## 11. 组装：Transformer Block 与完整语言模型
 
 一个 pre-norm block 有两次残差相加：
 
@@ -376,17 +392,7 @@ RMSNorm 不改形状，attention 和 SwiGLU 的输出也都是 `(B, S, D)`，两
 
 ![pre-norm 残差结构](block.svg)
 
-完整 Transformer LM：前面接 token embedding，中间叠 `L` 个 block，最后接 RMSNorm 和 LM head：
-
-```text
-输入 token IDs        (B, S)
-→ Embedding           (B, S, D)
-→ Transformer Block×L (B, S, D)
-→ RMSNorm             (B, S, D)
-→ LM head             (B, S, V)
-```
-
-`V` 是词表大小。输出的 `(B, S, V)` 就是 TinyGPT 那节见过的 logits，每个位置都有一组预测下一 token 的分数。A1 的模型没有另加位置 embedding，位置全由各层 attention 内部的 RoPE 处理。
+完整 Transformer LM：前面接 token embedding，中间叠 `L` 个 block，最后接 RMSNorm 和 LM head，回到第 5 节那条通路。A1 的模型没有另加位置 embedding，位置全由各层 attention 内部的 RoPE 处理。
 
 这也是我觉得前面两个 lab 有必要的原因：看到 logits 时，我们已经知道它可以和右移一位的目标算 loss；生成时取最后一个位置的 logits 采样出下一个 token，再接回输入。这一篇先把前向接稳，训练系统留给下一篇。
 
@@ -402,11 +408,11 @@ RMSNorm 不改形状，attention 和 SwiGLU 的输出也都是 `(B, S, D)`，两
 
 参数量还解释不了长序列的成本。四个 attention 投影的计算随 `B·S·D²` 增长，QKᵀ 和对 V 加权随 `B·S²·D` 增长，SwiGLU 随 `B·S·D·d_ff` 增长。上下文长度 `S` 拉大时，attention 的平方项不能忽略。
 
-### 最后怎么确认它真接通了
+### 怎么确认它真接通了
 
-我的验证顺序：先跑组件测试，再检查完整模型输出是 `(B, S, V)`。然后做一个因果性检查：改动输入序列的后半段，前半段的 logits 应该不变——mask 写反了，这个检查立刻能抓出来。RoPE 用两组相同相对距离的位置验证点积，参数量用上面的公式核对。
+写完每个组件，我用三类检查确认它们真接通了。一是形状：完整模型的输出必须是 `(B, S, V)`，每个组件的输入输出也要和第 5 节的通路对得上。二是因果性：改动输入序列的后半段，前半段的 logits 应该不变——mask 写反了，这个检查立刻能抓出来。三是数值：RoPE 用两组相同相对距离的位置验证点积，参数量用上面的公式核对。
 
-当前的诚实状态：`test_transformer_lm` 和截断输入测试通过，BPE 和 tokenizer 的正确性测试通过；BPE 的速度测试没过（前面说过，3 秒多对 1.5 秒的预算）；SwiGLU 和 SiLU 的官方测试适配器还没接，加上我自己加的 B=2 前向检查揭出了 RoPE 的广播问题。模型主路径跑通，和所有输入形状都处理正确，是两件事，得分别验证。
+模型主路径跑通，和所有输入形状都处理正确，是两件事，得分别验证。
 
 ## 后记
 
