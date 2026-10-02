@@ -112,3 +112,16 @@ search:
   path: search.xml
   field: post
   content: true
+
+# Render opted-in posts at build time; preserve LaTeX through marked.
+xmath:
+  every_page: false
+  append_css: true
+  packages:
+    - ams
+    - newcommand
+    - mathtools
+  tex_config:
+    tags: none
+    inlineMath: [["$", "$"]]
+    displayMath: [["$$", "$$"]]

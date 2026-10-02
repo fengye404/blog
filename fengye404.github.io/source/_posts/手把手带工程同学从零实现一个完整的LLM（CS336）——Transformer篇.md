@@ -2,6 +2,7 @@
 title: 手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇
 typora-root-url: ./手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇
 date: 2026-09-20 01:45:00
+xmath: true
 tags:
   - AI
   - LLM
