@@ -12,6 +12,8 @@ tags:
 
 # 手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇
 
+> 本文除图片以外，90% 内容为古法手搓，仅用 AI 润色
+
 ## 前言
 
 最近我在学习 CS336「Language Modeling from Scratch」，是斯坦福大学的大语言模型构建课程。这门课程在各种社交媒体（X）中都很火爆，但是在内网似乎没有多少人分享过，所以我想写一系列文章来分享一下我的学习过程。
@@ -26,58 +28,502 @@ tags:
 
 如果你也想学习 LLM 的底层原理，强烈建议跟着本篇文章，独立认真完成 Assignment 1（注：CS336 的 Assigment 中都会附带一份 AGENTS.md，以防你的 coding agent 直接帮你一键完成作业）
 
-为了先建立对于神经网络体感，文章开头不会带你直接进入 Assignment1，而是会先从最基础的 MLP、FFN 等概念引入。
+为了先建立对于神经网络体感，文章开头会先从基础的 MLP 引入
 
 ## 为什么要学习这个
 
-在正式开始之前，先解释一下为什么所有工程同学都需要学习 CS336。
+相信很多 Agent 开发者（包括我在内），都只是把 LLM 当做一个魔法黑盒，我们只负责调用它的 API，它就可以实现一切。
 
-从 25 年初转向 Agent 开发以来，LLM 基本就是一个 HTTP 接口：prompt 进去，文本出来，中间发生什么一概不管。这个状态能干活，但天花板很明显——模型行为不符合预期的时候，黑盒外面的人只能猜：是 prompt 写得不好，还是上下文塞得太长，还是任务本身超了模型能力？猜来猜去都是玄学。
+但是如果不去了解 LLM 的底层运行原理，那就无法科学地回答：什么样的 prompt 是更好的？新模型发布后的 model card 里面写的参数都是什么意思？technical report 里面的各种架构变动又代表着什么？随着 AI 对于传统软件架构的冲击，越来越多的 Agent 工程同学同时也要为运行效果负责，必须要去了解模型原理、推理、训练。
 
-其实很多问题的答案写在模型内部。长上下文该硬塞还是做检索，取决于模型训练时的上下文长度和位置编码怎么设计——RoPE 外推到训练时没见过的长度，注意力分数会明显劣化，prompt 写得再好也救不回来。推理成本和并发吞吐也有确定的账：attention 的计算量随序列平方增长，KV cache 随序列线性增长，这两个数直接决定部署时的显存预算。还有 tokenizer，工具调用参数里那些 JSON 括号、空格和转义符，切出来的 token 长什么样，直接影响成本和模型对格式的敏感程度。
+附一张 CS336 课程讲义中的截图：
 
-这些都不是调 API、改 prompt 能解决的。CS336 的做法是把每个零件亲手写一遍：tokenizer 自己训练，attention 自己算，位置编码自己旋转。写完之后回头看 vLLM 的 PagedAttention、看各种长上下文外推方案，都能看懂背后的设计取舍。
+![image-20260926221435390](./image-20260926221435390.png)
 
-## 1. 两个仓库
+## 1. MLP
 
-学习材料分两层，[cs336-study](https://github.com/fengye404/cs336-study) 是配套的小 lab，每个只解决一个小问题，代码短，跑完马上能看到 shape 和数字，[cs336-assignment](https://github.com/fengye404/cs336-assignment) 则放官方作业的正式实现。不直接开 assignment 的原因在于 A1 的脚手架很少，拿到手就是一个 PDF 加一堆测试，容易懵，先在 lab 里把每个组件的简化版过一遍，再回去写正式实现，精力才能放在设计取舍上，不至于卡在某个 shape 里。后面的顺序是 MLP 热身，TinyGPT 搭骨架，然后对照 A1 把零件一个个换掉。
+在开始 Transformer 之前，需要先了解一个简单的神经网络是什么样的。这里从 MLP（Multi-Layer Perceptron，多层感知机）开始，它是一种最基础的神经网络。我们先用它做一个小实验，看看数据怎么输入、模型怎么得到预测结果，以及训练到底是在做什么。
 
-## 2. MLP：先把训练回路跑通
+### 线性回归
 
-第一个 lab 不碰语言模型，任务是拟合 `y = sin(x) + 0.3 * cos(3x)`，输入落在 `[-2π, 2π]` 并加了噪声，模型是三层 MLP（`1 → 64 → 64 → 1`，Tanh 激活），训练循环可以压缩成五行：
+假设我们拿到 `(1, 3)、(2, 5)、(3, 7)` 三组输入和答案，希望程序根据这些数据找到规律，再去预测新的输入。
+
+我们先尝试用一条直线拟合这些数据，模型写成 `y_pred = w * x + b`，w（权重）和 b（偏置）是可以调整的参数。根据数据不断调整它们，让预测结果更接近答案，这个过程就叫训练。
+
+上面这种用直线拟合数据、预测数值的做法，叫一线性回归。PyTorch 提供了一个现成的**线性层 `nn.Linear`**，帮我们保存权重、偏置并完成计算。这里用 `nn.Linear(1, 1)`，表示每个样本输入一个数、输出一个数，执行的就是 `w * x + b`。
+
+下面代码里的 Tensor（张量），可以先理解为 PyTorch 用来存放数字、进行计算的多维数组。`[[1.0], [2.0], [3.0]]` 是一个 3 行 1 列的 Tensor，形状（shape）是 `(3, 1)`：每行一个样本，每个样本只有一个输入值。
 
 ```python
-pred = model(x_train[idx])          # 前向
-loss = loss_fn(pred, y_train[idx])  # 算误差
-optimizer.zero_grad()               # 清上一步的梯度
-loss.backward()                     # 反向
-optimizer.step()                    # 更新
+import torch
+from torch import nn
+
+x = torch.tensor([[1.0], [2.0], [3.0]])  # 已知的输入
+y = torch.tensor([[3.0], [5.0], [7.0]])  # 对应的答案
+
+model = nn.Linear(1, 1)  # 创建模型，内部随机初始化 w 和 b
+
+pred = model(x)  # Linear 内部用当前的 w、b 计算 w * x + b
+print("训练前的预测：", pred)
 ```
 
-权重一开始是随机的，前向算出预测，loss 衡量预测和答案差多少，`backward()` 给每个参数算梯度，`step()` 用梯度更新参数。后面换成语言模型，回路还是这几行，一个步骤都不多。
+运行到这里，我们只是用初始的 w、b 算了一次，模型还没有学习过，预测通常和 `[3, 5, 7]` 对不上。接下来就要比较预测和答案的差距，再调整参数。
 
-800 步跑完的真实日志：
+输入有多个数时，Linear 会对它们加权求和，再加上偏置。后面讲 Transformer 时，我们会用矩阵乘法手搓这个过程。
+
+### 什么是训练
+
+刚创建的 w、b 是随机初始化的，预测通常不准。我们需要用一个数衡量预测和答案的差距，这个数叫 **loss（损失）**。这里用均方误差（MSE），把每个样本的误差平方，再取平均：
 
 ```text
-step 0001 | train_loss=0.57724 | val_loss=0.35146
-step 0100 | train_loss=0.08547 | val_loss=0.25838
-step 0300 | train_loss=0.06590 | val_loss=0.64648
-step 0800 | train_loss=0.00640 | val_loss=0.24745
+答案：[3, 5, 7]
+预测：[2, 4, 6]
+loss = ((2-3)² + (4-5)² + (6-7)²) / 3 = 1
 ```
 
-train loss 降到 0.0064，val loss 上下波动，这两个数要分开看：train loss 降说明模型在拟合训练数据，val loss 飘说明数据里的噪声学不进去，这很正常。后来看语言模型的训练日志，最早的直觉就来自这种小实验。`zero_grad()` 那行漏掉的话，PyTorch 会把梯度一直累积下去，loss 曲线直接就是平的，写训练循环的时候值得先把这五行骨架搭好。
+预测全部正确时，loss 就是 0。我们训练模型，就是调整 w、b，让这个数尽量变小。
 
-## 3. TinyGPT：能跑的最小语言模型
+那怎么知道参数该往哪调？梯度可以帮我们判断。直观上就像下坡，每次朝着 loss 更小的方向调整一点，这叫梯度下降。学习率控制步子大小，步子太大也会走过头。
 
-第二个 lab 把整套结构搭起来。语料是一段重复 40 遍的小文本，字符级 tokenizer，词表 23，任务只有一个：预测下一个字符。输入 ID 是 `[10, 20, 30]`，目标就是往后错一位的 `[20, 30, 40]`，每个位置输出一组词表分数叫 logits，拿右移一位的 ID 算交叉熵 loss，再走刚才那条回路。
+看下面的例子：黑点是已知答案，彩色直线是模型的预测。随着 w、b 不断调整，直线逐渐靠近这些点，下面记录的 loss 也随之降低。
 
-整体数据流：
+![梯度下降训练：预测直线逐渐贴近数据，loss 随更新次数下降](./gradient-descent.png)
 
-![Transformer 整体数据流](arch.svg)
+后面的 MLP 也是这个过程，只是需要调整的参数更多。
 
-先不展开 attention 和 MLP 的公式，盯住一条链路就够了：输入 `(B, S)` 的字符 ID，输出 `(B, S, 23)` 的 logits，拿右移一位的 ID 算 loss，反向传播，更新权重。TinyGPT 的 block 把 attention 和 MLP 的输出加回原向量，输入输出始终是 `(B, S, D)`，位置信息来自一张可学习的位置向量表。
+### 非线性拟合
 
-300 步的真实日志：
+前面我们用一个 Linear 拟合了一条直线。但实际任务中，输入和输出之间经常是更复杂的非线性关系，比如一条弯曲的曲线，一个 Linear 就不够用了。那把多个 Linear 叠起来行不行？我们把两层展开看看：
+
+```text
+h = w1 * x + b1
+y = w2 * h + b2
+  = (w2 * w1) * x + (w2 * b1 + b2)
+```
+
+把上面的 `w2 * w1` 看成新的权重，`w2 * b1 + b2` 看成新的偏置，就又回到了 `w * x + b`。所以，**多个 Linear 直接串起来，仍然等价于一个 Linear**，这个结论对多个输入、输出也成立。这是线性代数里的基本性质：仿射变换复合后仍然是仿射变换（带偏置的 Linear 严格来说叫仿射变换）。
+
+所以我们在 Linear 之间加入非线性的激活函数，让网络能拟合曲线。这里用 `Tanh`，它把输入映射到 -1 到 1 之间，函数图像是一条 S 形曲线。
+
+```python
+# Sequential 按顺序执行，上一层的输出交给下一层
+model = nn.Sequential(
+    nn.Linear(1, 64),   # 一个输入，算出 64 个中间值
+    nn.Tanh(),         # 对每个值做非线性变换
+    nn.Linear(64, 64),  # 对这些值加权求和，加上偏置，得到 64 个输出
+    nn.Tanh(),
+    nn.Linear(64, 1),   # 最后得到一个预测值
+)
+```
+
+这就是我们这里的 MLP：三个 Linear，中间加了两个 Tanh。`Linear(1, 64)` 可以理解为同时计算 64 个不同的 `w * x + b`，每个都有自己的参数；Tanh 本身没有需要训练的参数。
+
+接下来我们用 `y = sin(x) + 0.3 * cos(3x)` 加一点随机噪声生成数据，看看这个 MLP 能不能学出曲线的规律。
+
+一个完整的 MLP 可以参考下面这段代码，已经写了详细的注释，如果有不懂的地方可以问问自己的 AI。
+
+```python
+from __future__ import annotations
+
+import math
+import random
+
+import torch
+from torch import nn
+
+def make_dataset(n: int = 2048) -> tuple[torch.Tensor, torch.Tensor]:
+    # x 原本是一维向量，unsqueeze(1) 把它变成 (n, 1)。
+    # 神经网络通常按二维 batch 输入理解数据：每一行是一个样本，每一列是一个特征。
+    # Java 类比：原来像 double[n]，unsqueeze 后更像 double[n][1]。
+    x = torch.linspace(-2 * math.pi, 2 * math.pi, n).unsqueeze(1)
+    # randn_like(x) 生成和 x 形状相同的随机噪声。
+    # 这里加噪声是为了让任务更像真实数据：真实数据通常不会完美落在一条函数曲线上。
+    noise = 0.05 * torch.randn_like(x)
+    # 这里造一个有规律但不完全干净的函数，让模型学 sin/cos 的组合。
+    # x 是输入，y 是标准答案。训练时模型只看到 x，loss 会拿预测值和 y 比较。
+    y = torch.sin(x) + 0.3 * torch.cos(3 * x) + noise
+    return x, y
+
+class TinyMLP(nn.Module):
+    def __init__(self) -> None:
+        # nn.Module 是所有 PyTorch 模型/层的基类。
+        # super().__init__() 会初始化父类里负责登记参数、子模块等基础设施。
+        super().__init__()
+        # nn.Sequential 会按顺序执行这些层：
+        # Linear 做仿射变换，Tanh 提供非线性，否则模型只能学直线。
+        # Linear(1, 64)：每个样本输入 1 个数字，输出 64 维隐藏表示。
+        # Linear(64, 1)：最后把 64 维隐藏表示压回 1 个预测值。
+        self.net = nn.Sequential(
+            nn.Linear(1, 64),
+            nn.Tanh(),
+            nn.Linear(64, 64),
+            nn.Tanh(),
+            nn.Linear(64, 1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # 在 PyTorch 里，调用 model(x) 时，实际会转到 forward(x)。
+        # 这有点像 Java 里某个框架约定你实现 handle/request 方法，然后框架负责调用。
+        return self.net(x)
+
+def main() -> None:
+    # 固定随机种子，方便你多次运行时看到接近的结果。
+    torch.manual_seed(42)
+    random.seed(42)
+
+    x, y = make_dataset()
+    # 简单切分：前 80% 做训练集，后 20% 做验证集。
+    split = int(0.8 * len(x))
+    x_train, y_train = x[:split], y[:split]
+    x_val, y_val = x[split:], y[split:]
+
+    model = TinyMLP()
+    # optimizer 负责根据梯度更新模型参数；lr 是每次更新的步子大小。
+    # model.parameters() 来自 nn.Module，会递归收集 self.net 里 Linear 的 weight/bias。
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-3)
+    # MSELoss 衡量预测值和真实值的平方误差，适合这个回归任务。
+    loss_fn = nn.MSELoss()
+
+    print("shape check")
+    print(f"x_train: {tuple(x_train.shape)}")
+    print(f"y_train: {tuple(y_train.shape)}")
+    print(f"prediction: {tuple(model(x_train[:8]).shape)}")
+    print()
+
+    batch_size = 128
+    for step in range(1, 801):
+        # 真实训练通常不会每一步都用完整训练集，而是抽一个 mini-batch。
+        # 好处：计算更快，也让每步梯度带一点随机性，常常更容易训练。
+        # 随机抽一批样本。idx 的 shape 是 (batch_size,)。
+        idx = torch.randint(0, len(x_train), (batch_size,))
+        # 前向传播：输入 x，得到预测 pred。
+        # x_train[idx] 的 shape 是 (batch_size, 1)，对应一批样本。
+        pred = model(x_train[idx])
+        loss = loss_fn(pred, y_train[idx])
+
+        # PyTorch 默认会累积梯度，所以每一步训练前要先清空旧梯度。
+        optimizer.zero_grad()
+        # 反向传播：从 loss 出发，计算每个参数的梯度。
+        loss.backward()
+        # 根据梯度真正更新参数。
+        optimizer.step()
+
+        if step == 1 or step % 100 == 0:
+            # 验证时不需要梯度；no_grad 会省内存，也避免误把验证计算放进计算图。
+            # 注意：验证集不参与 optimizer.step，只用于观察模型有没有泛化。
+            with torch.no_grad():
+                val_loss = loss_fn(model(x_val), y_val)
+            print(
+                f"step {step:04d} | "
+                f"train_loss={loss.item():.5f} | "
+                f"val_loss={val_loss.item():.5f}"
+            )
+
+    with torch.no_grad():
+        # 拿几个没放进 batch 的点，看模型现在会输出什么。
+        sample_x = torch.tensor([[-3.0], [0.0], [3.0]])
+        sample_y = model(sample_x)
+
+    print()
+    print("sample predictions")
+    for value, pred in zip(sample_x.squeeze().tolist(), sample_y.squeeze().tolist()):
+        print(f"x={value:+.1f} -> y_hat={pred:+.4f}")
+
+if __name__ == "__main__":
+    main()
+```
+
+## 2. 语言模型基础
+
+前面我们用 MLP，根据输入的 x 预测一个数。接下来换个任务：给模型一段文字，让它预测下一个字。比如输入「今天天气」，模型接着生成「很」，再把「今天天气很」作为输入，继续预测。这样反复进行，就能逐步生成一段文字。
+
+这里我们用一个极简的小 demo 来演示这个过程，下面是完整代码，已经写了详细的注释，可以自己本地跑一跑，如果有不懂的地方可以问问自己的 AI。
+
+> 这个小 demo 的目的是为了构建对于语言模型的体感，后续会逐章手撕其中的所有模块
+
+```python
+from __future__ import annotations
+
+import math
+
+import torch
+from torch import nn
+import torch.nn.functional as F
+
+
+TEXT = (
+    "agents plan actions observe results and update context. "
+    "language models predict tokens from previous tokens. "
+    "attention lets each token read useful earlier tokens. "
+) * 40
+
+
+class CausalSelfAttention(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, block_size: int) -> None:
+        super().__init__()
+        # 多头 attention 会把 d_model 平均分给每个 head。
+        # d_model 是每个 token 的向量维度；block_size 才是最大上下文长度。
+        assert d_model % num_heads == 0
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        # qkv 一次性算出 query/key/value，减少三次线性层的样板代码。
+        # 输入和输出 shape 都围绕 (batch_size, seq_len, d_model) 展开。
+        self.qkv = nn.Linear(d_model, 3 * d_model)
+        self.proj = nn.Linear(d_model, d_model)
+        # register_buffer 注册的是“不是参数、但要跟着模型移动/保存”的 tensor。
+        # mask 不需要训练，所以不用 nn.Parameter。
+        self.register_buffer("mask", torch.tril(torch.ones(block_size, block_size)))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x: (batch_size, seq_len, d_model)
+        batch_size, seq_len, d_model = x.shape
+        q, k, v = self.qkv(x).chunk(3, dim=-1)
+        # 多头 attention 标准 shape: (batch_size, num_heads, seq_len, head_dim)。
+        # 多头不是多跑几个模型，而是把 d_model 切成几份，让不同 head 学不同关系。
+        q = q.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+
+        # q @ k^T 得到 token 之间的相似度分数。
+        scores = q @ k.transpose(-2, -1) / math.sqrt(self.head_dim)
+        # causal mask 保证当前位置不能看未来 token。
+        scores = scores.masked_fill(self.mask[:seq_len, :seq_len] == 0, float("-inf"))
+        weights = F.softmax(scores, dim=-1)
+        out = weights @ v
+        # 把 heads 维度拼回 d_model，恢复 (batch_size, seq_len, d_model)。
+        out = out.transpose(1, 2).contiguous().view(batch_size, seq_len, d_model)
+        return self.proj(out)
+
+
+class Block(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, block_size: int) -> None:
+        super().__init__()
+        # 一个 GPT block 通常由两块组成：
+        # attention 负责 token 之间交流，MLP 负责每个 token 自己的非线性加工。
+        self.ln1 = nn.LayerNorm(d_model)
+        self.attn = CausalSelfAttention(d_model, num_heads, block_size)
+        self.ln2 = nn.LayerNorm(d_model)
+        self.mlp = nn.Sequential(
+            # 常见设计会先把 hidden 扩到 4 倍，再压回原维度。
+            # 这不是改变序列长度，而是改变每个 token 向量内部的维度。
+            nn.Linear(d_model, 4 * d_model),
+            nn.GELU(),
+            nn.Linear(4 * d_model, d_model),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Pre-LN Transformer block：先 LayerNorm，再 attention/MLP。
+        # 残差连接 x + f(x) 保持 shape 不变，也让梯度更容易流动。
+        # 第一行：每个 token 先从上下文里读信息。
+        x = x + self.attn(self.ln1(x))
+        # 第二行：每个 token 再独立过一段 MLP 做加工。
+        x = x + self.mlp(self.ln2(x))
+        return x
+
+
+class TinyGPT(nn.Module):
+    def __init__(self, vocab_size: int, block_size: int) -> None:
+        super().__init__()
+        d_model = 64
+        self.block_size = block_size
+        # token_embedding 负责“这个 token 是什么”。
+        # 输入 idx 是整数 id；embedding 输出连续向量。神经网络只能处理数值张量。
+        self.token_embedding = nn.Embedding(vocab_size, d_model)
+        # position_embedding 负责“这个 token 在第几个位置”。
+        # 如果没有位置信息，attention 本身不天然知道顺序。
+        self.position_embedding = nn.Embedding(block_size, d_model)
+        self.blocks = nn.Sequential(
+            Block(d_model, num_heads=4, block_size=block_size),
+            Block(d_model, num_heads=4, block_size=block_size),
+        )
+        self.ln = nn.LayerNorm(d_model)
+        self.lm_head = nn.Linear(d_model, vocab_size)
+
+    def forward(self, idx: torch.Tensor, targets: torch.Tensor | None = None):
+        # idx: (batch_size, seq_len)，里面是 token ids。
+        batch_size, seq_len = idx.shape
+        # positions 是 0..seq_len-1，对应序列里的每个位置。
+        # shape 是 (seq_len,)，加到 token_embedding 时会自动 broadcast 到 batch 维度。
+        positions = torch.arange(seq_len, device=idx.device)
+        # token 信息和位置信息相加，得到每个位置的初始表示。
+        x = self.token_embedding(idx) + self.position_embedding(positions)
+        x = self.blocks(x)
+        x = self.ln(x)
+        # logits: (batch_size, seq_len, vocab_size)，每个位置预测下一个 token。
+        # 对某个位置来说，vocab_size 个数字就是“下一个 token 是词表中每个 id 的分数”。
+        logits = self.lm_head(x)
+
+        loss = None
+        if targets is not None:
+            # cross_entropy 要求 (N, classes) 和 (N,)，所以合并 batch_size/seq_len。
+            loss = F.cross_entropy(logits.view(batch_size * seq_len, -1), targets.view(batch_size * seq_len))
+        return logits, loss
+
+    @torch.no_grad()
+    def generate(self, idx: torch.Tensor, steps: int) -> torch.Tensor:
+        # generate 是推理阶段：不再给 targets，也不算 loss，只反复预测下一个 token。
+        for _ in range(steps):
+            # 如果序列超过 block_size，只保留最后 block_size 个 token 作为上下文。
+            context = idx[:, -self.block_size :]
+            logits, _ = self(context)
+            # 只取最后一个位置的 logits，因为生成时只需要预测“下一个 token”。
+            probs = F.softmax(logits[:, -1, :], dim=-1)
+            next_id = torch.multinomial(probs, num_samples=1)
+            idx = torch.cat([idx, next_id], dim=1)
+        return idx
+
+
+def make_data():
+    # 字符级 tokenizer：简单但足够演示语言模型训练。
+    # 后面如果换成 BPE tokenizer，这里 data 的构造方式会变，但模型仍然吃 token ids。
+    chars = sorted(set(TEXT))
+    stoi = {ch: i for i, ch in enumerate(chars)}
+    itos = {i: ch for ch, i in stoi.items()}
+    data = torch.tensor([stoi[ch] for ch in TEXT], dtype=torch.long)
+    return data, stoi, itos
+
+
+def get_batch(data: torch.Tensor, batch_size: int, block_size: int):
+    # 每个样本是一段连续 token ids。x 是输入上下文，y 是每个位置的下一个 token。
+    starts = torch.randint(0, len(data) - block_size - 1, (batch_size,))
+    x = torch.stack([data[i : i + block_size] for i in starts])
+    # y 是 x 的下一个字符序列，用来做 next-token prediction。
+    y = torch.stack([data[i + 1 : i + block_size + 1] for i in starts])
+    return x, y
+
+
+def decode(ids: torch.Tensor, itos: dict[int, str]) -> str:
+    return "".join(itos[i] for i in ids.tolist())
+
+
+def main() -> None:
+    torch.manual_seed(123)
+    # block_size 是模型一次最多能看的上下文长度。
+    block_size = 32
+    data, stoi, itos = make_data()
+    model = TinyGPT(vocab_size=len(stoi), block_size=block_size)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-3)
+
+    x, y = get_batch(data, batch_size=4, block_size=block_size)
+    logits, loss = model(x, y)
+    assert loss is not None
+    print("shape check")
+    print(f"x: {tuple(x.shape)}")
+    print(f"logits: {tuple(logits.shape)}")
+    print(f"loss: {loss.item():.4f}")
+    print()
+
+    for step in range(1, 301):
+        x, y = get_batch(data, batch_size=32, block_size=block_size)
+        _, loss = model(x, y)
+        assert loss is not None
+        # 标准训练三步：清梯度 -> 反向传播 -> 更新参数。
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        if step == 1 or step % 50 == 0:
+            print(f"step {step:04d} | loss={loss.item():.4f}")
+
+    start = torch.tensor([[stoi["a"]]], dtype=torch.long)
+    sample = model.generate(start, steps=180)[0]
+    print()
+    print(decode(sample, itos))
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### 预测下一个字
+
+神经网络无法直接对文字做计算，所以我们先给字符编号，把一段文字转换成一串数字。上面代码中的 `make_data()` 就是在执行这一过程，比如：
+
+```text
+字符：a  g  e  n  t  s
+编号：2  8  6  14  19  18
+
+"agents" → [2, 8, 6, 14, 19, 18]
+```
+
+这份字符和编号的对应表叫词表。这里按字符编号，相当于一个简化的 Tokenizer（分词器），每个字符就是一个 token。实际语言模型常用 BPE 等分词方式，一个 token 可以包含多个字符，后面会详细介绍。
+
+前面的 MLP 要预测一个具体数值，输出的就是数值。这里要从词表里选择下一个字符，属于分类任务。同一段文字后面也可以有不同的接法，所以我们用概率表示各个字符出现的可能性。
+
+模型先给词表里的每个字符输出一个分数，这组分数叫 **logits**。再通过 softmax，把它们转换成总和为 1 的概率。上面代码中的 `generate()` 就是在执行这一过程。比如输入 `agent` 后，各个字符的概率可以是这样（仅作示意）：
+
+| 下一个字符 | 概率 |
+| --- | --- |
+| s | 60% |
+| 空格 | 25% |
+| 其余字符合计 | 15% |
+
+模型认为 `s` 更有可能接在后面，拼成 `agents`。文字生成时，我们就可以根据这些概率选出下一个字符。
+
+完整过程可以先记成：
+
+```text
+文字 → 字符编号 → TinyGPT → 每个字符的分数 → 概率 → 选出下一个字符
+```
+
+在 `TinyGPT.forward()` 里，`token_embedding` 会根据编号查出一组可以训练的数，这一步叫 Embedding。然后用 Transformer 处理前面的文字，最后通过 `lm_head` 这个 Linear，输出词表中每个字符的分数。这里又用到了前面见过的线性层，只是输出从一个数变成了一组数。
+
+### Attention
+
+输入 `agent`，预测后面的字符时，模型需要结合前面的 `a、g、e、n、t`。这些字符的信息怎么汇集到一起？这里就要用到 Attention（注意力机制）。
+
+前面每个字符已经通过 Embedding 转成了一组数。Attention 会为当前位置能看到的各个位置计算权重，再按权重把它们的信息加起来。权重越大，对当前位置的输出贡献就越大。上面代码中的 `CausalSelfAttention` 就是在执行这一过程。
+
+比如 `t` 所在的位置可以读取 `a、g、e、n、t` 的信息，用来预测下一个字符；`a` 所在的位置只能读取自己。这个限制叫因果遮罩（causal mask），避免模型在训练时提前看到后面的答案。
+
+在 `Block.forward()` 中，数据先经过 Attention 汇集上下文信息，再经过 MLP 做非线性处理：
+
+```python
+x = x + self.attn(self.ln1(x))
+x = x + self.mlp(self.ln2(x))
+```
+
+这里的 MLP 对每个位置分别计算，位置之间的信息交流由 Attention 完成。
+
+具体的 attention 机制会在后面详细介绍。
+
+### 训练
+
+模型刚创建时参数是随机的，自然不知道 `agent` 后面应该接什么。训练需要给它输入和对应的答案，但文字里的答案从哪里来？
+
+**原文的下一个字符就是答案。** 比如训练文本开头的 `agents`，就可以构造这些训练目标：
+
+```text
+看到 a     → 预测 g
+看到 ag    → 预测 e
+看到 age   → 预测 n
+看到 agen  → 预测 t
+看到 agent → 预测 s
+```
+
+`get_batch()` 把输入和答案错开一个位置，就能同时准备好这些目标。把编号还原成字符看，就是：
+
+```text
+输入 x：a  g  e  n  t
+答案 y：g  e  n  t  s
+```
+
+训练时，模型会在每个位置预测下一个字符。前面介绍的因果遮罩保证每个位置只能利用自己和前面的内容。
+
+前面的 MLP 用均方误差衡量预测值和答案差多少。这里模型输出的是一组字符分数，我们用**交叉熵损失（cross-entropy loss）**衡量它预测得好不好。
+
+比如输入 `agent`，原文的下一个字符是 `s`。模型给 `s` 的概率只有 10% 时，说明它不太看好这个正确答案，loss 就比较大；如果给到 90%，loss 就比较小。训练会根据这个误差调整参数，让模型给正确答案更高的概率。
+
+上面代码中的 `F.cross_entropy` 就是在执行这一过程，直接传入 logits 和答案编号即可，它内部会处理从分数到概率的计算。接着回到 `main()` 的训练循环，反向传播、更新参数。只不过这次训练的是 TinyGPT 里面的参数，包括 Embedding、Attention 和 MLP 等模块。
+
+开头的 `TEXT` 用下面三句英文重复 40 遍作为训练文本：
+
+```text
+agents plan actions observe results and update context.
+language models predict tokens from previous tokens.
+attention lets each token read useful earlier tokens.
+```
+
+模型有两层 Transformer Block，一次最多看 32 个字符，每次训练抽取 32 段文本。我们可以运行一下观察日志：
 
 ```text
 step 0001 | loss=3.3545
@@ -86,176 +532,1050 @@ step 0100 | loss=0.1608
 step 0300 | loss=0.1020
 ```
 
-生成结果已经像模像样：
+loss 整体降下来了，说明模型在这些训练文本上，预测下一个字符的能力变得更强了。
+
+### 推理与生成
+
+训练完成后，我们用模型预测新的输入，这个过程就是推理。每轮推理都根据当前文本预测下一个 token，再通过采样选出一个 token，追加到文本末尾。`generate()` 把这个过程循环执行，就能逐步生成一段文字。
+
+![文字生成过程：每轮预测、采样，并把新字符加入下一轮输入](./generation-loop.png)
+
+`main()` 最后从字符 `a` 开始，调用 `model.generate()` 连续生成 180 个字符，再由 `decode()` 把编号还原成文字，运行后可以得到结果：
 
 ```text
 anguage models predich tokens from previous tokens. attention lets each token read useful
-earlier tokens. agents plan actions observe results and update context. language models pre
+ earlier tokens. agents plan actions observe results and update context. language models pre
 ```
 
-注意 `predich`——predict 都拼错了。0.10 的 loss 有水分，语料重复了 40 遍，模型基本是背下来的，字符级建模本身也不难。这个 lab 的意义在于验证 shape 和梯度路径是通的，能跑就行。
+已经能看到训练文本里的句子了，但也有 `predich` 这样的拼写错误。这个模型只见过几句反复出现的文字，训练 loss 降低还不足以说明它能处理其他文本。通过这个示例，我们可以看到语言模型如何从文字中获得训练目标，又如何通过反复预测生成文字。
 
-这个骨架用的是 `nn.Linear`（带 bias）、`nn.LayerNorm`、可学习位置编码和 GELU，属于 GPT-2 的默认搭配。A1 要全部手写，并且换上 RMSNorm、RoPE 和 SwiGLU。接下来先解决输入问题——文本怎么变成 token。
+接下来就沿着刚才的数据流，从 Tokenizer 开始，把各个模块拆开实现。这个 demo 用了 PyTorch 自带的 Linear、Embedding、LayerNorm 等组件，正式进入 Assignment 1 后，我们会手写相应组件，并用上 RMSNorm、RoPE 和 SwiGLU。
 
-## 4. 文本编码与 Tokenizer
+## 3. 拆解 Transformer
 
-### 字符、Unicode 与 UTF-8
+这一节我会用我自己的 CS336 Assignment1 的实现来对照着逐一拆解 Transformer 的模块，我的实现在这里：https://github.com/fengye404/cs336-assignment。后面的代码全都片段全都出自这个仓库。
 
-计算机只存数字，要显示字符得先定义编号：ASCII 给 127 个字符编号，Unicode 给全球 15 万+ 字符分配码点（比如 `A` 的码点是 65，「中」的码点是 20013）。码点只是编号，UTF-8 负责把码点变长编码成字节——ASCII 占一个字节，汉字一般占三个字节：
+> 如果你也想尝试一下 Assignment1，强烈建议停止阅读，去 clone 原始仓库：https://github.com/stanford-cs336/assignment1-basics，自己独立完成。如果你只是想了解一下 Transformer 的各个模块，那就让我们继续吧！
+
+### 1. Architecture
+
+前面我们已经跑通了一个小型语言模型，接下来开始拆解它的内部结构。先看一下《Attention Is All You Need》论文中最初的 Transformer 架构：
+
+![原始 Transformer 的 Encoder–Decoder 架构](./transformer-original-architecture.png)
+
+图片来源：[Attention Is All You Need，Figure 1](https://arxiv.org/html/1706.03762v7#S3.F1)。
+
+图中左边是 **Encoder（编码器）**，右边是 **Decoder（解码器）**。原论文主要用它做机器翻译。Encoder 先处理原文，Decoder 再结合 Encoder 的输出和已经生成的译文，逐个预测后面的词。
+
+现在常见的 GPT、Llama 这类生成式大语言模型采用的是 **decoder-only** 架构。已有文本放在同一条序列里，每个位置只能读取自己和前面的内容，再预测下一个 token。它省去了独立的 Encoder，以及 Decoder 中读取 Encoder 输出的那层 Attention。前面的 TinyGPT 也是这个结构。
+
+我们在 CS336 Assignment 1 中要实现的，可以理解为一个 **Llama 风格的简化语言模型**，采用 decoder-only 结构，并使用 RMSNorm、RoPE 和 SwiGLU。这些也是 [Llama 架构](https://arxiv.org/html/2302.13971v1#S2.SS2) 中的设计，后面会逐个介绍。下面是作业给出的架构图：
+
+![CS336 Assignment 1 的语言模型整体架构与 Transformer Block](./cs336-transformer-architecture.png)
+
+图片来源：[CS336 Assignment 1，Figure 1、Figure 2](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
+
+沿着左图从下往上看，token 编号先经过 **Embedding** 转成向量，再经过多层 **Transformer Block**，最后通过 Norm 和 Linear 得到词表中每个 token 的分数。用 softmax 把分数转成概率，就接上了前面讲的预测过程。
+
+右图把一个 Block 展开了。其中 **Attention** 让各个位置读取上下文，**Feed-Forward** 是对每个位置单独计算的前馈网络，这里使用 SwiGLU。图中的 Norm 使用 RMSNorm，放在这两个模块之前，所以叫 **pre-norm**；绕过模块、连到 Add 的线表示把模块的输入加回输出，这叫**残差连接**。
+
+接下来就按这张图拆开实现。先从模型输入之前的文本编码与 Tokenizer 开始。
+
+### 2. Tokenizer 与 Embedding
+
+前面的 TinyGPT 给每个字符编了一个号。这里我们换成 Assignment 1 要求的 **byte-level BPE**。它会先把文字变成字节，再把经常一起出现的字节组合成一个 token。
+
+#### 字符、Unicode 与 UTF-8
+
+先来复习一下字符编码。我们看到的 `A`、`中` 都是字符，**Unicode 给这些字符分配了统一的编号**，这个编号叫作码点。比如 `A` 的编号是 65，`中` 的编号是 20013。
+
+但文字在文件里存储、在网络上传输时，用的是字节。一个字节有 8 位，能表示的整数范围是 0～255，像 20013 这样的编号，一个字节就放不下了。**UTF-8 规定了怎么把一个 Unicode 码点编码成字节**，根据码点的不同，会用到 1～4 个字节。
+
+| 字符 | Unicode 码点（十进制） | UTF-8 字节（十进制） | 字节数 |
+| --- | --- | --- | --- |
+| `A` | 65 | `[65]` | 1 |
+| `中` | 20013 | `[228, 184, 173]` | 3 |
+
+所以，一个字符不一定只占一个字节。`A中` 只有两个字符，经过 UTF-8 编码后却有四个字节。Python 中的 `encode()` 和 `decode()` 就能完成这两个方向的转换。
 
 ```python
->>> list("中".encode("utf-8"))
-[228, 184, 173]
+>>> text = "A中"
+>>> data = text.encode("utf-8")
+>>> list(data)
+[65, 228, 184, 173]
+>>> data.decode("utf-8")
+'A中'
 ```
 
-Python 的 `str` 是字符序列，`encode` 之后才是字节序列，字符、字节、token 是三种不同的单位。说上下文长度 128，数的是 token，不是 128 个字或者 128 个 byte，做 Agent 上下文预算的时候这个换算天天要用。
+把文字转成 UTF-8 字节后，每个字节都只会落在 0～255 之间。因此，初始词表只要为这 256 种字节各准备一个 token，就能表示任意有效的 UTF-8 文本，也能处理训练时没见过的字符。
 
-### BPE：预分词与合并规则
+以完整的字符串 `我爱AI！` 为例，逐个字符转成 UTF-8 字节，会得到下面的结果。
 
-为什么不能直接喂字节？词表确实只要 256 个值，但序列会变得非常长。`Transformer` 一个单词 11 个字节，attention 的计算量随序列长度平方增长。Tokenizer 的作用是在词表大小和序列长度之间找平衡，本质上是对文本的压缩。
+| 字符 | UTF-8 字节 |
+| --- | --- |
+| 我 | `[230, 136, 145]` |
+| 爱 | `[231, 136, 177]` |
+| A | `[65]` |
+| I | `[73]` |
+| ！ | `[239, 188, 129]` |
 
-BPE 从 256 个单字节 token 起步，统计语料里哪些字节组合最值得合并。它的训练是频次统计，产物是一张合并规则表，和梯度训练是两码事。
+```text
+"我爱AI！"
+→ [230, 136, 145, 231, 136, 177, 65, 73, 239, 188, 129]
+```
 
-合并之前先做预分词。A1 给了一条 GPT-2 风格的正则，把文本切成带前导空格的单词、数字、标点等片段，BPE 只在片段内部合并：
+原来的 5 个字符变成了 11 个 token。只按字节切分，序列会比较长。接下来，BPE 会把经常相邻出现的 token 合并成更长的字节片段，让同一段文字可以用更少的 token 表示。
+
+#### BPE
+
+BPE 每轮统计相邻 token 对出现的次数，把最高频的一对合成一个新 token。反复执行，直到词表达到指定大小，或者已经没有可以合并的相邻对。
+
+假设训练文本里有四种单词，`low` 出现 5 次，`lower` 出现 2 次，`widest` 出现 3 次，`newest` 出现 6 次。这些英文字母在 UTF-8 中都只占一个字节，所以初始时每个字母就是一个 token，比如 `newest` 会拆成 `n e w e s t`。
+
+`widest` 和 `newest` 都有相邻的 `s t`，加起来出现了 3 + 6 = 9 次。它是出现次数最多的组合之一，我们的实现会在同频时选择字典序更大的那一对，因此第一轮选中 `s t`，把它合成一个新 token `st`。此时 `newest` 变成 `n e w e st`。重新统计后，下一轮再把相邻的 `e st` 合成 `est`，于是变成 `n e w est`，从最初的 6 个 token 缩短到 4 个。
+
+每个方框表示一个 token，下面这张图展示了前两轮的频次统计和合并结果。
+
+![BPE 的前两轮合并过程](./bpe-merges.png)
+
+前面的例子里，我们直接拿单词来统计。实际输入是一整段文字，需要先按规则切成若干片段，再分别做 BPE，这一步叫**预分词**。比如，我们的正则规则会把 `Hello world!` 切成下面这样。
+
+```text
+"Hello world!" → ["Hello", " world", "!"]
+```
+
+其中 `" world"` 保留了开头的空格。每个片段随后转成字节，BPE 的频次统计和合并都只在片段内部进行。比如 `Hello` 里的 `l` 和 `o` 可以合并，但末尾的 `o` 不能和下一个片段开头的空格合并。这样就给合并划定了边界，避免跨片段组合不断进入词表。
+
+预分词得到的片段还会继续拆分、合并，最终一个片段可以对应一个或多个 token。代码里的 `PATTERN` 和 `regex.findall()` 就是在执行预分词。`<|endoftext|>` 这样的特殊 token 会提前单独切出，作为一个完整 token 保留，不参与普通文本的合并。
+
+下面是完整实现，前面讲的内容就是 `train_bpe()` ，入参是训练文本的文件路径、目标词表大小和特殊 token 列表，出参是 `vocab` 和 `merges`。
+
+`vocab` 负责保存 token 编号与字节串的对应关系，`merges` 保存有顺序的合并规则。
 
 ```python
+import regex
+from collections import Counter
+
 PATTERN = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+
+
+def train_bpe(input_path, vocab_size, special_tokens):
+    # 以 bytes 读取语料，之后显式按 UTF-8 解码，避免默认编码影响结果。
+    with open(input_path, "rb") as f:
+        corpus = f.read()
+    text = corpus.decode("utf-8")
+
+    # special token 是文档边界：不把它的内部字符交给预分词或 BPE 统计。
+    # 这里先按照 special 把原始文本分开成 spilt list
+    spilt_list = []
+    if len(special_tokens) == 0:
+        spilt_list.append(text)
+    else:
+        special_token_pattern = "|".join([regex.escape(special) for special in special_tokens])
+        spilt_list = regex.split(special_token_pattern, text)
+    # 再对拆开来的每一项，按照作业里面的预分词器（实际上就是一段正则）进行预分词
+    # 为什么要预分词，可以看这个：https://zhuanlan.zhihu.com/p/692508797
+    all_pretokens = []
+    for spilt in spilt_list:
+        all_pretokens.extend(regex.findall(PATTERN, spilt))
+    # 先统计下预分词后，每个词的频率，例如 "low" -> 5。
+    pretoken_text_counts = Counter(all_pretokens)
+
+    # 将每个 pre-token 从字符串转为 utf-8 的 bytes，例如 "low"-> b"low"
+    # 然后再拆成独立的
+    # token_sequence_counts 里面的内容：(b"l", b"o", b"w") -> 5
+    token_sequence_counts = {}
+    for key, value in pretoken_text_counts.items():
+        raw_bytes = key.encode("utf-8")
+        bytes_tokens = []
+        # bytes 实际上是 int 的数组，所以这里取出来的是 int，还需要手动创建一个 bytes
+        for byte_int in raw_bytes:
+            bytes_tokens.append(bytes([byte_int]))
+        token_sequence_counts[tuple(bytes_tokens)] = value
+
+    # 初始词表包含全部 256 个可能的单 byte 值。
+    # special token 作为一个完整 token 加入 vocab，不拆成内部的 byte token。
+    merges = []
+    vocab = {}
+    for token_id in range(256):
+        vocab[token_id] = bytes([token_id])
+    for token_id, special_token in enumerate(special_tokens, start=256):
+        vocab[token_id] = special_token.encode("utf-8")
+
+    # 每轮只学习一种最高频 pair；新 token 会让 vocab 的大小增加 1。
+    current_vocab_size = len(vocab)
+    while current_vocab_size < vocab_size:
+        # 基于「当前」token 序列统计相邻 pair 的加权次数。
+        # 例如某序列出现 5 次，其中的每个相邻 pair 都贡献 5 次，而不是 1 次。
+        pair_counts = Counter()
+        for seq, count in token_sequence_counts.items():
+            for pair in zip(seq, seq[1:]):
+                pair_counts[pair] += count
+
+        # 没有相邻 pair 时，说明无法继续学习新的 merge。
+        if not pair_counts:
+            break
+        # 找最高频 pair；同频时由 find_max 按字典序选择更大的 pair。
+        pair, count = find_max(pair_counts)
+
+        # 两个 bytes token 拼接成一个新 bytes token，例如 b"l" + b"o" -> b"lo"。
+        target = pair[0] + pair[1]
+        vocab[current_vocab_size] = target
+        # merges 必须保留创建顺序；编码时会按这个顺序应用规则。
+        merges.append(pair)
+
+        # 不能边遍历边修改旧表：读取旧 token_sequence_counts，
+        # 将 merge 后的结果写入新表，全部完成后再整体替换。
+        new_token_sequence_counts = {}
+        for seq, count in token_sequence_counts.items():
+            new_seq = []
+            index = 0
+            while index < len(seq):
+                if index + 1 < len(seq) and (seq[index], seq[index + 1]) == pair:
+                    # 命中时消费两个旧 token，写入一个新 token；因此不会重叠合并。
+                    new_seq.append(target)
+                    index += 2
+                else:
+                    # 未命中时保留当前 token，继续检查下一个位置。
+                    new_seq.append(seq[index])
+                    index += 1
+            new_token_sequence_counts[tuple(new_seq)] = count
+        token_sequence_counts = new_token_sequence_counts
+
+        # 本轮新增了一个 vocab token，下一轮将基于更新后的序列重新统计 pair。
+        current_vocab_size += 1
+
+    return vocab, merges
+
+
+def find_max(pair_counts):
+    return max(pair_counts.items(), key=lambda item: (item[1], item[0]))
 ```
 
-没有预分词的话，"您好 人没了" 里可能切出 "好 人" 这种横跨两个词的 token。
+#### Tokenizer
 
-训练时先数每种 pre-token 出现多少次，再转成 UTF-8 字节序列。统计 pair 的时候有个常见错误：只数每个片段里 pair 出现的次数，忘了乘上片段本身的频率。比如 `abab` 出现 5 次，pair `(a,b)` 在里面出现 2 次，实际应该贡献 10 次，不是 2 次，频率丢了 merge 顺序就变了。
-
-每轮找计数最高的相邻 pair，拼成新 token，记录进 `vocab` 和 `merges`。`merges` 的顺序必须留住，因为编码新文本时要按学习时的顺序重放，同频次的时候 A1 还规定了字典序的 tie-breaking，这种细节值得拿小样例走一遍。特殊 token 也容易踩坑——以 `<|endoftext|>` 为例，它表示文档边界，训练前先按它把文本切开，内部不参与 pair 统计，两侧也不允许合并，边界不能跨。
-
-在示例语料上跑了一遍：vocab 500，学到 243 条 merge，前几条依次是 `(" ","t")`、`(" ","a")`、`("h","e")`，第 5 条已经把 `" t"` 和 `"he"` 合成 `" the"`，高频组合先被学走。写 BPE `encode_iterable` 的时候，突然有点怀念写 Java 的日子——至少字符串处理不用先转成 bytes 再担心半个汉字的问题。
-
-### Tokenizer 的封装：编码与解码
-
-`train_bpe` 的产出是 `vocab`（ID → bytes）和有序的 `merges`，给定新文本时 encode 先识别特殊 token，再做预分词，普通片段拆成单字节 token，按 `merges` 顺序重放合并，最后查词表得到整数 ID。decode 则反过来：ID 找回 bytes，全部拼起来之后统一做 UTF-8 解码。decode 不能逐 token 解码，因为一个 token 的 bytes 可能只是某个汉字 UTF-8 编码的一部分，单独解码直接报错，正确的做法是先拼全部 bytes，遇到非法序列用替代字符处理，大文件还要用 `encode_iterable` 流式产出 ID。到这里，原始文本变成了模型能接收的整数序列。
-
-## 5. Transformer 模块串讲：先看整条数据流
-
-进组件之前，先把 decoder-only 语言模型的整条前向通路摆出来。
-
-```text
-输入 token IDs        (B, S)
-→ Embedding           (B, S, D)
-→ Transformer Block×L (B, S, D)
-→ RMSNorm             (B, S, D)
-→ LM head             (B, S, V)
-```
-
-`B` 是 batch，`S` 是序列长度，`D` 是模型宽度，`V` 是词表大小，token ID 先查表变成向量，中间 `L` 个 block 反复加工且形状始终是 `(B, S, D)`，最后归一化后 LM head 把每个位置映射成词表分数。block 里只有两类东西：attention 负责 token 之间交换信息，FFN 负责对每个位置单独加工，归一化和残差连接把它们包起来。
-
-和 TinyGPT 对照，A1 要换的零件就这几处：
-
-| 组件 | TinyGPT（lab） | Assignment1（要手写） | 换的原因 |
-|------|---------------|----------------------|---------|
-| Linear | `nn.Linear`，带 bias | 手写无 bias 版本 | 把权重形状和初始化摆到台面上 |
-| Embedding | `nn.Embedding` | 手写查找表 | 看清 ID 如何变成向量 |
-| 归一化 | LayerNorm | RMSNorm | 沿最后一维控制数值尺度 |
-| 位置编码 | 可学习的绝对位置 | RoPE，作用在 q/k 上 | 把位置放进 attention 分数的计算 |
-| FFN | GELU，两层 Linear | SwiGLU，三层 Linear | 加一条门控分支 |
-| 残差结构 | pre-LN | pre-norm | block 的输入输出形状保持一致 |
-
-残差和 pre-norm 的布局不用动，骨架是好的。作业要求自己写 Linear、Embedding、softmax，初始化、bias、dtype 这些平时被框架藏起来的细节，自己写一次才知道哪里会出问题，`cs336-assignment` 里的 `model.py` 注释比代码多，RoPE 那段先把旋转矩阵推了一遍，再拆成两两配对，最后才落成逐元素公式。
-
-## 6. Embedding 和 Linear
-
-Embedding 就是一张查找表，词表大小 `V`，每个 token 的向量维度 `D`，表本身就是 `(V, D)`，输入 `(B, S)` 的 token ID 查完表变成 `(B, S, D)`，这张表初始时不含任何「语义」，里面的向量全靠训练更新。Linear 负责向量维度的投影，Q/K/V、FFN、LM head 里全是它，这份作业里它只有矩阵乘法和受控初始化，没有 bias，作业给的初始化公式是 `sqrt(2/(d_in+d_out))`，截断在 ±3σ。权重形状有个常见坑：按直觉写成 `(in, out)`，前向直接 `x @ W`，结果和参考对不上，后来才发现 PyTorch 里向量按行存，权重是 `(out, in)`，前向要转置成 `y = x @ W.T`，输入前面带多少 batch 维都行，矩阵乘法只作用在最后一维。
-
-## 7. Attention 与因果多头自注意力
-
-softmax 实现时先减最大值再算指数，不减的话分数稍大 `exp` 就溢出。Attention 就是加权投票，每个 token 决定从前面哪些 token 各取多少信息，公式是 `softmax(QKᵀ / √d_k) V`，`√d_k` 不能省，因为 Q 和 K 的分量近似独立时，点积的方差随 `d_k` 线性增长，不缩放的话 softmax 被推到饱和区，梯度接近 0。语言模型不能偷看未来，因果 mask 是下三角，第 t 个位置只能看到 1 到 t，被掩掉的位置填 `-inf`，softmax 之后权重就是 0，前提是每行至少有一个可见位置——因果 mask 的对角线保证了这一点。
-
-多头把这套并行跑 `H` 份，每个 head 分到 `d_k = D / H` 的宽度：
-
-![Attention 的形状流转](attention-shapes.svg)
-
-TinyGPT 把 qkv 放在一次投影里算，A1 拆成三个 Linear，对照公式更直观，形状流转如下：
-
-```text
-x:       (B, S, D)
-q/k/v:   (B, S, D)
-拆多头:   (B, H, S, d_k)
-scores:  (B, H, S, S)
-拼回来:   (B, S, D)
-```
-
-拆多头时先把最后一维分成 `(H, d_k)`，再把 `H` 转到序列维前面，算完 attention 再转回来过输出 Linear，把这几个 shape 标在代码旁边比背公式更能防错。
-
-## 8. RoPE：把位置旋进 q 和 k
-
-TinyGPT 的位置信息是查表查来的，RoPE 换了个思路：把 q 和 k 的每两个分量当成二维平面上的一个点，按 token 的位置旋转一个角度。
-
-![RoPE 的旋转示意](rope.svg)
-
-位置 m 旋转 `m·θ`，位置 n 旋转 `n·θ`，两个向量做点积时角度相减，结果只剩 `(m - n)·θ`，也就是说 q 和 k 的内积只跟相对距离有关，「前一个词」这种关系不应该因为句子变长就改变。
-
-先把每个位置的 cos/sin 预计算成表，`theta` 控制不同分量对的旋转速度：前面的转得快管近距离，后面的转得慢管远距离。应用时把最后一维两两分组，每组当二维向量转，`repeat_interleave(2)` 把每对分量共用的 cos/sin 复制两份，`unflatten + unbind` 取出偶数、奇数分量，`stack((-odd, even))` 就是二维旋转里的 `(-y, x)`，数学上等价于一个分块对角的旋转矩阵，但逐元素算更省。
-
-这里用的是相邻两个分量配对，配对顺序必须和参考权重一致，顺序混用的话张量形状全对、数值全错。相对位置这个性质不用等训练，直接就能测：
+前面通过 BPE 得到了词表和合并规则。接下来把它们封装成一个 Tokenizer，提供 `encode()` 和 `decode()` 两个方法，分别把文字转换成 token 编号，以及把编号还原成文字。
 
 ```python
-rope = RotaryPositionalEmbedding(d_k=16, theta=10000.0, max_seq_len=64)
-base_q = torch.randn(1, 1, 1, 16).expand(1, 1, 8, 16)
-base_k = torch.randn(1, 1, 1, 16).expand(1, 1, 8, 16)
-positions = torch.arange(8).expand(1, 8).unsqueeze(1)
-qr, kr = rope(base_q, positions), rope(base_k, positions)
+import regex
+from collections.abc import Iterable, Iterator
 
-# 位置 (2, 1) 和 (5, 4) 的相对距离都是 1，点积应该相等
-a = (qr[0, 0, 2] * kr[0, 0, 1]).sum()
-b = (qr[0, 0, 5] * kr[0, 0, 4]).sum()
-torch.testing.assert_close(a, b)   # 验证通过
+PATTERN = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+
+
+class Tokenizer:
+    def __init__(
+        self,
+        vocab: dict[int, bytes],
+        merges: list[tuple[bytes, bytes]],
+        special_tokens: list[str] | None = None
+    ):
+        if special_tokens is None:
+            special_tokens = []
+        self.vocab = vocab
+        self.merges = merges
+        self.special_tokens = special_tokens
+
+        # special token 最好校验一下，如果不在 vocab 里面，我们就给他手动加一下然后分配一个 id
+        for sp_token in special_tokens:
+            sp_token_bytes = sp_token.encode("utf-8")
+            if(sp_token_bytes not in self.vocab.values()):
+                self.vocab[max(self.vocab.keys()) + 1] = sp_token_bytes
+                
+        # 一个字典推导式，实际上就是把 vocab 的 kv 调转一下，因为它是 int2bytes 的    
+        self.vocab_b2i = {value: key for key, value in self.vocab.items()}
+
+    def encode(self, text: str) -> list[int]:
+        token_int_list = []
+        
+        # 和 train_bpe 一样，还是先按照 special tokens 切分一下
+        if len(self.special_tokens) == 0:
+            split_list = [text]
+        else:
+            special_token_pattern = "|".join(
+                regex.escape(special)
+                for special in sorted(self.special_tokens, key=len, reverse=True)
+            )
+            split_list = regex.split(f"({special_token_pattern})", text)
+            
+        # 切分后的 split_list: ["Hi", "<|endoftext|>", " there"]
+        # 对齐进行遍历，对每一个单独的结果进行 encode
+        for part in split_list:
+            if(part == ""):
+                continue
+            
+            # 如果是 special token，就直接从 vocab 里面找到 id，然后 append 到最终结果里面
+            if(part in self.special_tokens):
+                token_int_list.append(self.vocab_b2i[part.encode("utf-8")])
+            else:
+                # 否则就是普通的正常文本
+                # 先预分词，Tokenizer 的 encode 也是不能跨 pre-token 的
+                # pre_tokens_bytes_list 的内容：[[b"a", b"b", b"d"],[b"a", b"b", b"d"],....]
+                pre_tokens = regex.findall(PATTERN, part)
+                pre_tokens_bytes_list = []
+                for pre_token in pre_tokens:
+                    raw_bytes = pre_token.encode("utf-8")
+                    pre_tokens_bytes = []
+                    for pre_token_byte_int in raw_bytes:
+                        pre_tokens_bytes.append(bytes([pre_token_byte_int]))
+                    pre_tokens_bytes_list.append(pre_tokens_bytes)
+                
+                # 这里三层循环
+                current_list_index = 0
+                while current_list_index < len(pre_tokens_bytes_list):
+                    # 1. 先依次取出预分词的结果，取出来的内容 pre_token_bytes：[b"a", b"b", b"d"]
+                    pre_token_bytes = pre_tokens_bytes_list[current_list_index]
+                    for merge in self.merges:
+                        # 2. 遍历 merges，一条 merge 规则的输入是一条 token 序列，输出也是一条新的 token 序列
+                        new_bytes = []
+                        i = 0
+                        while i < len(pre_token_bytes) - 1: 
+                            # 3. 从左到右扫描最新 token 序列，根据 merge 关系，拼装新的 token 序列
+                            if merge == (pre_token_bytes[i], pre_token_bytes[i+1]):
+                                new_bytes.append(pre_token_bytes[i]+pre_token_bytes[i+1])
+                                i += 2
+                            else:
+                                new_bytes.append(pre_token_bytes[i])
+                                i += 1
+                        # 从左到右扫描 完 token 序列后，边界要处理下
+                        # 例如 pre_token_bytes = [b"a", b"b", b"c"] merge = (b"a", b"b")
+                        # merge 完了之后还剩最后一个 b"c" 就退出了，要手动添加到最新的 token 序列里面
+                        if(i == len(pre_token_bytes) - 1):
+                            new_bytes.append(pre_token_bytes[i])
+                        # 新的 token 序列需要赋值，进入下一个 merge 规则的循环
+                        pre_token_bytes = new_bytes
+                        
+                    # 2、3循环跑完后，pre_token_bytes 就是一个已经完整应用过所有 merges 的新的 token 序列了，此时就可以查词表转为 int 了
+                    for pre_token in pre_token_bytes:
+                        token_int_list.append(self.vocab_b2i[pre_token])
+                        
+                    current_list_index += 1
+            
+        return token_int_list
+        
+    def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
+        for part in iterable:
+            for token_id in self.encode(part):
+                yield token_id
+                
+    def decode(self, ids: list[int]) -> str:
+        bytes_list = []
+        for token_id in ids:
+            bytes_list.append(self.vocab[token_id])
+        return b"".join(bytes_list).decode("utf-8", errors = "replace")
 ```
 
-最后说一个形状上的坑：RoPE 只作用在 q 和 k 上，v 不旋转，接回多头 attention 时位置下标是 `(B, S)`，q/k 是 `(B, H, S, d_k)`，直接拿 `(B, S)` 查 cos/sin 表得到 `(B, S, d_k)`，和 `(B, H, S, d_k)` 逐元素乘时 B 和 H 两个轴会对撞。正确做法是查表前给位置下标补一个 head 轴变成 `(B, 1, S)`，坑在这里——batch 等于 1 的时候广播恰好能过，这个错误的暴露很容易被推迟到真正训练之前。
+Tokenizer 在词表大小和序列长度之间做取舍。合并常见组合可以缩短序列，但词表越大，模型的存储和输出计算开销也越大。
 
-## 9. SwiGLU：每个位置自己的前馈网络
+BPE 学出词表和合并规则后，编码就按这套规则执行。**训练和推理要使用同一套 Tokenizer**，保证同一个编号始终对应相同的内容。
 
-Attention 负责 token 之间的信息交换，block 里还需要一条对每个位置分别工作的前馈网络，原始 Transformer 用两层 Linear 加 ReLU，A1 用 SwiGLU，多一条门控分支：
+推荐一个网站：https://tiktokenizer.vercel.app/，可以直观地体验分词结果，这里我们演示 gpt2 的 tokenizer：![image-20260930062433735](./image-20260930062433735.png)
 
-```text
-SwiGLU(x) = W₂(SiLU(W₁x) ⊙ W₃x)
-```
+#### Embedding
 
-`W₁` 和 `W₃` 都把 `D` 升到 `d_ff`，两路结果逐元素相乘，`W₂` 再降回 `D`。为什么 `d_ff` 常取约 `8D/3`？传统两层 FFN 隐藏宽度取 `4D` 时，两个矩阵约 `8D²` 个参数，SwiGLU 有三个矩阵，`d_ff` 取 `8D/3` 时也约是 `8D²`，参数量对齐了不同 FFN 之间才好公平比较。
+Tokenizer 把文字转换成了 token 编号，但编号本身不能表达语义关系。假设「国王」和「皇后」各是一个 token，编号分别是 `42` 和 `87`，这两个数的大小和差距，并不能告诉模型它们的含义有多接近。
 
-## 10. RMSNorm
+**Embedding 把每个 token 编号转换成一个可学习的向量。** 通过训练，「国王」和「皇后」这样含义相关的 token，可以在向量空间中更接近。这样，模型就能通过向量之间的关系来表示语义上的相似性，并将这些向量交给后面的 Attention 和前馈网络处理。
 
-归一化做两件事：把激活值的尺度拉回来，再乘一个可学习的缩放。LayerNorm 减均值、除标准差，RMSNorm 省掉减均值，也没有 bias，只按最后一维算均方根。输入输出都是 `(B, S, D)`，形状不变，平方、均值、缩放先在 fp32 里算，再转回输入 dtype——低精度训练时这一步能减少归一化环节的数值误差，作业 PDF 明确要求这个 upcast，照做就是。
+实现上，我们把所有 token 的向量放在一张表里。词表里有 `vocab_size` 个 token，每个向量有 `d_model` 个数，表的形状就是 `(vocab_size, d_model)`。像 `vocab_size` 和 `d_model` 这种需要在创建模型时就确定的参数就叫超参数。
 
-## 11. 组装：Transformer Block 与完整语言模型
+实际处理时，我们通常会把多段文本组成一批（batch），一起交给模型。比如一批有 2 段文本，每段有 3 个 token，编号就可以排成一个 2 行、3 列的数组，形状记作 `(2, 3)`。用 `B` 表示一批的文本条数、`S` 表示每段的 token 数量，就写成 `(B, S)`。
 
-一个 pre-norm block 有两次残差相加：
+经过 Embedding，每个编号都被替换成一个向量。如果每个向量有 4 个数，输出形状就变成 `(2, 3, 4)`，表示 **2 段文本，每段 3 个 token，每个 token 用 4 个数表示**。一般写成 `(B, S, D)`，其中 `D` 就是向量的维度。
+
+在拆解 Transformer 的过程中，我们要始终留意张量的 shape。看懂每个维度代表什么，以及数据经过各个模块后如何变化，就更容易理解模型内部的计算过程。
+
+![原始文本经过 Tokenizer 和 Embedding 的完整形状变化](./tokenizer-embedding-shapes.png)
+
+下面的公式表示，取出第 `b` 段文本中第 `s` 个 token 的编号，再去表 `E` 中查出对应向量。
+
+$$
+x_{b,s}=E[\mathrm{token\_id}_{b,s}],\qquad E\in\mathbb{R}^{V\times D}
+$$
+
+完整的 `Embedding` 实现如下。
 
 ```python
-def forward(self, x, token_positions):
-    x = x + self.attention(self.norm1(x), token_positions)
-    x = x + self.ffn(self.norm2(x))
-    return x
+import torch
+import math
+
+
+class Embedding(torch.nn.Module):
+    def __init__(self, vocab_size: int, d_model: int, device=None, dtype=None):
+        super().__init__()
+        
+        # vocab_size 词表大小
+        # d_model 每个 token 的维度
+        self.embedding = torch.nn.Parameter(
+            torch.empty(
+                (vocab_size, d_model),
+                device = device,
+                dtype = dtype
+            )
+        )
+        
+        # 用 assignment1 里面给出的初始化公式进行初始化
+        # W ~ 𝒩(μ = 0, σ² = 1，截断到 [-3, 3]
+        torch.nn.init.trunc_normal_(
+            self.embedding,
+            mean = 0,
+            std = 1,
+            a = -3,
+            b = 3
+        )
+        
+    # embedding 实际上就是一个查表操作
+    # forward 的输入 tensor shape 为 (batch, seq_len)
+    # 里面执行的逻辑就是对每个 batch 的每个 seq 元素，执行一下查表操作
+    
+    # 怎么理解这个 []？
+    # 实际上 python 中 A[B] 等价于 A.__getitem__(B)
+    def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
+        return self.embedding[token_ids]
 ```
 
-RMSNorm 不改形状，attention 和 SwiGLU 的输出也都是 `(B, S, D)`，两次相加都成立，残差保留原输入，让子层在原向量基础上做增量更新。
+关于 Embedding 同样也推荐一个网站：https://token3d.netlify.app/，它将模型的 Embedding 表中的每个 token 向量从高维度映射到低维度，可以直观的看到 Embedding 是什么样的，我们同样选择 gpt2，图中有 50257 个点：
 
-![pre-norm 残差结构](block.svg)
+![image-20260930062758136](./image-20260930062758136.png)
 
-完整 Transformer LM 前面接 token embedding，中间叠 `L` 个 block，最后接 RMSNorm 和 LM head，回到第 5 节那条通路，A1 的模型没有另加位置 embedding，位置全由各层 attention 内部的 RoPE 处理。前面两个 lab 有必要的原因也在这里：看到 logits 时，已经知道它可以和右移一位的目标算 loss，生成时取最后一个位置的 logits 采样出下一个 token，再接回输入，这一篇先把前向接稳。
+> **扩展：Embedding 层与 Embedding 模型**
+>
+> 相信很多人之前在做语义搜索、RAG 时用过 Embedding 模型。它和这里的 Embedding 层都把输入转换成向量，但作用和处理过程不同。
+>
+> 这里的 **Embedding 层**是模型中的一个组件，按 token 编号查表，为每个 token 提供初始向量。同一个 token 出现在不同句子里，查到的向量相同，这一步还没有结合上下文。
+>
+> 常见的文本 **Embedding 模型**则接收一整段文字，经过包括 Attention 在内的多层计算，再汇总成一个表示整段文本的向量，用来比较文本的语义相似度。它内部通常也有 Embedding 层，但我们拿来做检索的向量，是整个模型处理后的结果。
 
-### 参数量和计算量也要对得上
+### 3. Linear 与 SwiGLU
 
-不带 bias、输入 Embedding 和输出 LM head 不共享权重时，参数量是：
+#### Linear
 
-```text
-2VD + L × (4D² + 3D·d_ff + 2D) + D
+经过 Embedding，每个 token 已经有了一个向量。**Linear 做的就是把一个向量通过线性计算，转换成另一个向量。** 具体来说，它用一组可学习的权重，对输入的各个分量做加权求和，组成新的向量。后面 Attention 中的 Q、K、V，以及 SwiGLU 中的向量变换，都会用到它。
+
+先看前面提到的线性回归的例子。那时一个输入对应一个权重，算的是 `y = wx + b`。现在输入有多个数，每个数都有自己的权重，把它们分别相乘再加起来，就得到一个输出。
+
+按照 Assignment1 的要求，作业采用了 PaLM、LLaMA 等模型中省略线性层偏置的设计，因此我们实现的是 `y = Wx`，省略了偏置 `b`。
+
+假设一个 token 的向量是 `[1, 2, 3, 4]`，我们希望输出 3 个数，就需要 3 组权重，每组都有 4 个数。把它们排在一起，得到一张 `3 × 4` 的权重矩阵 `W`。图中第一组权重是 `[1, 0, 1, 0]`，算出的第一个输出就是 `1×1 + 0×2 + 1×3 + 0×4 = 4`。另外两组分别算出 `6` 和 `-1`，于是输出向量变成 `[4, 6, -1]`。
+
+![Linear 的加权求和与 shape 变化](./linear-vector-transform.png)
+
+这里的整数权重是为了方便看清计算过程。实际使用时，权重先随机初始化，再通过训练更新，模型会学到怎样组合输入更有利于预测。`in_features` 决定每组权重有多少个数，`out_features` 决定有多少组权重，也就决定了输出向量的长度。即使输入输出长度相同，Linear 也能改变向量的内容。
+
+如果把单个输入向量写成一列，上面的计算就是：
+
+$$
+y=Wx,\qquad W\in\mathbb{R}^{d_{out}\times d_{in}}
+$$
+
+代码里，每个 token 的向量放在张量的最后一维，相当于横着排。因此计算写成 `X @ W.T`，`W.T` 就是对 `W` 进行转置操作。原本 `W` 的每一行是一组权重，转置后每一列是一组权重，刚好能与输入向量相乘求和。
+
+$$
+Y=XW^{\mathsf T}
+$$
+
+对于前面的 batch 示例，输入 shape 是 `(2, 3, 4)`，表示 2 段文本、每段 3 个 token、每个 token 有 4 个数。乘上 shape 为 `(4, 3)` 的 `W.T` 后，输出就变成 `(2, 3, 3)`。**6 个 token 都分别使用同一个 `W` 做变换，文本条数和 token 数量保持不变，只有最后一维从 4 变成了 3。** 这一步只处理每个 token 自身的向量，不会读取其他位置的 token。
+
+下面是完整的 `Linear` 实现。按照 Assignment1 的要求，权重的初始化采用截断正态分布，均值为 0，标准差为 $\sqrt{2/(d_{in}+d_{out})}$，取值限制在正负三倍标准差内。
+
+```python
+import torch
+import math
+
+
+class Linear(torch.nn.Module):
+    def __init__(self, in_features, out_features, device=None, dtype=None):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        
+        # 用 troch empty 申请出一个 tensor，devie、dtype 直接透传
+        # in_features 输入维度
+        # out_features 输出维度
+        self.W = torch.nn.Parameter(
+            torch.empty(
+                (out_features, in_features),
+                device = device,
+                dtype = dtype
+            )
+        )
+        
+        # 用 assignment1 里面给出的初始化公式进行初始化
+        # W ~ 𝒩(μ = 0, σ² = 2 / (d_in + d_out))，截断到 [-3σ, 3σ]
+        
+        # 先计算标准差
+        std = (2 / (in_features+out_features)) ** 0.5
+        torch.nn.init.trunc_normal_(
+            self.W,
+            mean = 0,
+            std = std,
+            a = -3 * std,
+            b = 3 * std
+        )
+    
+    # linear 实际上就是一个简单的线性变换，在 pytorch 中表达为 y=x@W.T，「.T」 表示转置
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x @ self.W.T
 ```
 
-拿 `V=256、D=256、L=4、d_ff=704` 代入，算出来 `3,344,640`，和 `sum(p.numel() for p in model.parameters())` 跑出来的完全一致，数字对上了，以后对不上就回去查漏层或者重复建层。参数量还解释不了长序列的成本，四个 attention 投影的计算随 `B·S·D²` 增长，QKᵀ 和对 V 加权随 `B·S²·D` 增长，SwiGLU 随 `B·S·D·d_ff` 增长，上下文长度 `S` 拉大时 attention 的平方项不能忽略。
+#### SwiGLU
 
-### 怎么确认它真接通了
+前馈网络对每个位置的向量分别计算。这里使用的 **SwiGLU**，由 Linear、激活函数和门控分支组成，可以看成前面 MLP 的一种变体。
 
-确认模型接通的检查可以分成三类。一是形状：完整模型的输出必须是 `(B, S, V)`，每个组件的输入输出也要和第 5 节的通路对得上。二是因果性：改动输入序列的后半段，前半段的 logits 应该不变——mask 写反了这个检查立刻能抓出来。三是数值：RoPE 用两组相同相对距离的位置验证点积，参数量用上面的公式核对。模型主路径跑通和所有输入形状都处理正确是两件事，得分别验证。
+先看它用到的激活函数 SiLU：
+
+$$
+\operatorname{SiLU}(x)=x\cdot\operatorname{sigmoid}(x)=\frac{x}{1+e^{-x}}
+$$
+
+下面这张作业原图比较了 SiLU 和 ReLU。SiLU 在 0 附近是平滑的，也允许一部分负值通过。
+
+![SiLU 与 ReLU 对比，Assignment 1 Figure 3](./assignment1-silu-relu.png)
+
+把 SiLU 和门控分支组合起来，就得到 SwiGLU。
+
+$$
+\operatorname{SwiGLU}(x)=W_2\left(\operatorname{SiLU}(W_1x)\odot W_3x\right)
+$$
+
+$\odot$ 表示逐元素相乘。`W1` 和 `W3` 都把向量从 `D` 扩到 `d_ff`，其中一路经过 SiLU，两路相乘后，再由 `W2` 缩回 `D`。把公式和下面的 `forward()` 对照起来看，两条分支分别保存在 `a`、`b` 中，最后相乘再交给 `w2`。
+
+作业建议 `d_ff` 取接近 $8D/3$ 的 64 的倍数。这样三个权重矩阵的参数量，接近传统隐藏宽度为 `4D` 的两层前馈网络。
+
+完整实现包含 `silu()` 和 `SwiGLU`，三个投影都复用前面写好的 `Linear`。
+
+```python
+import torch
+import math
+
+
+def silu(in_features: torch.Tensor):
+    return in_features * torch.sigmoid(in_features)
+
+
+class SwiGLU(torch.nn.Module):
+    def __init__(self, d_model: int, d_ff: int, device=None, dtype=None):
+        # d_ff：隐藏层的维度
+        
+        super().__init__()
+        self.d_model = d_model
+        self.d_ff = d_ff
+        
+        # w1、w3 负责升维
+        self.w1 = Linear(d_model,d_ff,device,dtype)
+        self.w3 = Linear(d_model,d_ff,device,dtype)
+        
+        # w2 负责降维
+        self.w2 = Linear(d_ff,d_model,device,dtype)
+        
+    def forward(self, x: torch.Tensor):
+        a = silu(self.w1(x)) 
+        b = self.w3(x)
+        # 注意这里是是逐元素相乘
+        return self.w2(a * b)
+```
+
+参考：[Assignment 1，§3.4.2，Figure 3、公式 (5)、(7)，PDF 第 21–22 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
+
+### 4. Attention
+
+前面说过，Attention 让每个位置读取上下文。具体怎么决定读哪些位置？先把输入向量经过三个 Linear，得到 **Q、K、V**。Q 用来和各个位置的 K 计算匹配分数，V 是最后要加权汇总的信息。
+
+注意，Q、K、V 都是计算出来的中间结果；三个 Linear 里的权重才是训练时更新的参数。
+
+#### 从分数到加权结果
+
+把匹配、归一化和加权汇总写在一起，就是 Attention 的计算公式。
+
+$$
+\operatorname{Attention}(Q,K,V)
+=\operatorname{softmax}\left(\frac{QK^{\mathsf T}}{\sqrt{d_k}}\right)V
+$$
+
+先用 `Q @ K.T` 算出每个位置对其他位置的分数，除以 $\sqrt{d_k}$ 控制数值尺度，再用 softmax 把每一行转成权重。最后乘 V，就得到按这些权重汇总的向量。
+
+softmax 的公式也可以直接对应到代码：
+
+$$
+\operatorname{softmax}(z)_i
+=\frac{e^{z_i-m}}{\sum_j e^{z_j-m}},\qquad m=\max_j z_j
+$$
+
+代码中先减去最大值，再计算指数和归一化。这样不会改变 softmax 的结果，还能避免指数运算溢出。
+
+#### 因果遮罩
+
+预测下一个 token 时，只能使用当前位置及之前的信息。因此，先把未来位置的分数设成负无穷，再做 softmax，这些位置的权重就会变成 0。
+
+代码里的 `mask` 中 True 表示允许读取，False 表示屏蔽。
+
+`socres` 是当前实现中的变量名，表示注意力分数；经过 softmax 后，这个变量保存注意力权重。
+
+#### 多头 Attention
+
+多头就是把 Q、K、V 的最后一维拆成 `H` 份，让每个头分别计算 Attention，然后再拼回来。每个头的宽度是 $d_k=D/H$。
+
+![Attention 的形状流转](./attention-shapes.svg)
+
+在 `MultiheadSelfAttention.forward()` 中，先用三个 Linear 算出 q、k、v，再通过 `view` 和 `transpose` 拆成多个头。
+
+中间会对 q、k 应用 RoPE，下一节展开。之后创建下三角遮罩，计算 Attention，再把多个头的结果拼回去。
+
+例如 `D=64、H=4`，每个头就处理 16 个分量。拼回后仍是 `(B, S, 64)`，最后的 `out_proj` 再用一个 Linear 混合各个头的信息。
+
+下面把 `softmax()`、注意力计算和完整的 `MultiheadSelfAttention` 放在一起。这里复用前面实现的 `Linear`，其中用到的 `RotaryPositionalEmbedding` 会在下一节完整给出。
+
+```python
+import torch
+import math
+
+
+def softmax(x: torch.Tensor, dim: int):
+    # 因为 exp 是指数函数，如果 x 过大可能会导致溢出，而 softmax 实际上只关心每个 x 的差值，不关心具体的绝对值，所以先全都减掉 x 的最大值
+    x = x - x.max(dim = dim, keepdim = True).values
+    exp_x = torch.exp(x)
+    return exp_x / exp_x.sum(dim = dim,keepdim = True)
+
+
+def scaled_dot_product_attention(
+    Q: torch.Tensor,
+    K: torch.Tensor,
+    V: torch.Tensor,
+    mask: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """
+    参数：
+        Q: [..., n, d_k]   （n 为 Query 序列长度）
+        K: [..., m, d_k]   （m 为 Key 序列长度）
+        V: [..., m, d_v]
+        mask: [n, m] 布尔矩阵，True 为保留，False 为屏蔽
+
+    返回：
+        [..., n, d_v] 与输入 batch 维一致的张量
+    """
+    # 先获取 K 向量维度
+    d_k = K.size(-1)
+    
+    # 计算 Q K 向量的分数，并除以 √d_k 进行缩放
+    socres = (Q @ K.mT) / math.sqrt(d_k)
+    
+    """
+    Masked Scores = [[10, -inf, -inf],
+                     [ 5,  10, -inf],
+                     [ 2,   8,  10]]
+
+        以下权重只示意遮罩后的形状，并非上面分数的实际 softmax 结果：
+        [[1.0, 0.0, 0.0],
+                       [0.3, 0.7, 0.0],
+                       [0.1, 0.4, 0.5]]
+    """
+    if mask is not None:
+        # mask 为 flase的地方设为负无穷
+        socres = socres.masked_fill(mask == False, float('-inf'))
+        
+    socres = softmax(socres, dim = -1)
+    
+    return socres @ V
+
+
+class MultiheadSelfAttention(torch.nn.Module):
+    def __init__(self, d_model: int, num_heads: int, theta=None, max_seq_len=None, device=None, dtype=None):
+        super().__init__()
+        
+        # 要用 head 数量均分 d_model，所以需要校验能否整除
+        assert d_model % num_heads == 0
+        
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        
+        # 先定义获取 QKV 向量的 Linear
+        self.W_Q = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.W_K = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.W_V = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        
+        # 输出经过 QKV 运算后需要再过一次 Linear
+        self.out_proj = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        
+        # 如果传入了 theta 和 max_seq_len，则处理 rope 的逻辑
+        if theta is not None and max_seq_len is not None:
+            self.rope = RotaryPositionalEmbedding(theta=theta, d_k=self.head_dim, max_seq_len=max_seq_len, device=device)
+        else:
+            self.rope = None
+        
+    def forward(self, x: torch.Tensor, token_positions=None):
+        # 先计算出完整的 QKV，再按照 head 拆分
+        q = self.W_Q(x)
+        k = self.W_K(x)
+        v = self.W_V(x)
+        
+        # 拆分后的多头 QKV 的 shape：(batch_size, num_heads, seq_len, head_dim)
+        # 这里 view 拆分需要先拆 qkv 的最后维度，所以前两维 shape 要展示保持 batch_size, seq_len，通过 transpose 处理成最终的 shape
+        batch_size, seq_len, d_model = x.shape
+        q = q.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        # 如果 rope 不为 null 就对 q、k 进行 rope 计算
+        if self.rope is not None:
+            # token_positions shape：(batch_size, seq_len)
+            if token_positions is None:
+                token_positions = torch.arange(seq_len, device=x.device).expand(batch_size, seq_len)
+            # 每条文本的位置沿 head 轴广播；一维位置可由所有文本共用。
+            if token_positions.ndim == 2:
+                token_positions = token_positions.unsqueeze(1)
+            q=self.rope(q, token_positions)
+            k=self.rope(k, token_positions)
+        
+        # 这里需要一个下三角矩阵
+        """
+        True  False False False
+        True  True  False False
+        True  True  True  False
+        True  True  True  True
+        """
+        mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool))
+        
+        # 计算注意力
+        out = scaled_dot_product_attention(Q=q,K=k,V=v,mask=mask)
+        
+        # 把 heads 维度拼回 d_model，恢复 (batch_size, seq_len, d_model)。
+        out = out.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        return self.out_proj(out)
+```
+
+参考：[Assignment 1，§3.4.4、§3.4.5，公式 (10)–(14)，PDF 第 23–26 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
+
+### 5. RoPE
+
+TinyGPT 用位置 Embedding 表示顺序。这里改用 **RoPE（旋转位置编码）**，直接把位置信息加到 Attention 的 q、k 中。
+
+它把向量的分量两两配对，每一对当成二维向量，按 token 的位置旋转一个角度。作业给出的旋转矩阵如下：
+
+![RoPE 的二维旋转矩阵，Assignment 1 公式 (8)](./assignment1-rope-rotation.png)
+
+其中，位置 `i` 的第 `k` 对分量使用的角度是：
+
+$$
+\theta_{i,k}=\frac{i}{\Theta^{(2k-2)/d_k}},\qquad k=1,\ldots,d_k/2
+$$
+
+$\Theta$ 对应代码里的 `theta`，控制旋转频率。不同分量对使用不同频率，同一对分量的位置越靠后，旋转角度越大。
+
+![RoPE 的旋转示意](./rope.svg)
+
+q 和 k 都旋转之后，它们点积中的位置影响取决于两个位置的相对距离。当然，点积还取决于 q、k 本身的内容。
+
+`RotaryPositionalEmbedding` 在初始化时预先算好 cos、sin，前向计算时按位置查表。
+
+代码里的 `(-odd, even)`，就是把一对分量 `(a, b)` 变成 `(-b, a)`。代入最后的逐元素运算，得到的正好是二维旋转：
+
+$$
+(a',b')=(a\cos\theta-b\sin\theta,\ a\sin\theta+b\cos\theta)
+$$
+
+cos、sin 用 `register_buffer` 保存，它们随模型移动设备，但不参与梯度训练。RoPE 只应用到 q、k，v 保持原样。
+
+接入多头 Attention 时还要对齐形状。q、k 是 `(B, H, S, d_k)`，如果位置下标是 `(B, S)`，需要先补成 `(B, 1, S)`，让各个头共用位置。
+
+下面是完整的 RoPE 实现，注释中也展开了向量两两拆分、旋转和拼回的过程。
+
+```python
+import torch
+import math
+
+
+class RotaryPositionalEmbedding(torch.nn.Module):
+    def __init__(self, theta: float, d_k: int, max_seq_len: int, device=None):
+        # theta：RoPE 的频率基数
+        # d_k：q、k 向量维度
+        # max_seq_len：最大 token 长度
+        super().__init__()
+        self.d_k = d_k
+        
+        # 先计算每个位置需要旋转的角度
+        # 公式：f_k = 1 / theta^((2k - 2) / d_k)
+        # arange(0, d_k, 2) 产生 [0, 2, 4, ..., d_k-2]，对应公式中的2k-2(k从1开始)
+        # 注意这里 f_k 的 shape 是 (d_k / 2,)
+        f_k = 1 / (theta ** (torch.arange(0, d_k, 2, device=device).float() / d_k))
+        # 这里要用外积，外积的结果是前行后列，angle 是一个矩阵
+        # angle[n, k] = n × f_k = n / theta^((2k - 2) / d_k)
+        # angle 的shape：(max_seq_len, d_k / 2)
+        angle = torch.outer(torch.arange(max_seq_len, device=device).float(), f_k)
+        
+        # cos_table、sin_table shape 都是 (max_seq_len, d_k / 2)
+        self.register_buffer("cos_table", angle.cos())
+        self.register_buffer("sin_table", angle.sin())
+    
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor) -> torch.Tensor:
+        # x：shape 为 (..., seq_len, d_k) 的 q 或 k 向量
+        # token_positions：shape 为 (..., seq_len) 的整数位置下标；每个位置对应 x 中一个 q/k 向量所在的 token 位置。
+        
+        # 这里 cos 和 sin 的 shape 都是 token_positions.shape + (d_k // 2,)，得用 repeat_interleave 复制一下元素
+        cos_value = self.cos_table[token_positions].repeat_interleave(2, dim=-1).to(x.dtype)
+        sin_value = self.sin_table[token_positions].repeat_interleave(2, dim=-1).to(x.dtype)
+        
+        # 公式：rotated_q = q ⊙ cos_value + rotate_half(q) ⊙ sin_value
+        # rotate_half：[x0, x1, x2, x3, ...] → [-x1, x0, -x3, x2, ...]
+        
+        """
+        最后一维两两拆分，例如：
+        原来 (3, 6)：
+        [
+            [ 1,  2,  3,  4,  5,  6],
+            [ 7,  8,  9, 10, 11, 12],
+            [13, 14, 15, 16, 17, 18],
+        ]
+
+        现在 (3, 3, 2)：
+        [
+            [ [1, 2],  [3, 4],  [5, 6] ],      ← 第 0 个 token，3 组，每组 2 个
+            [ [7, 8],  [9,10],  [11,12] ],     ← 第 1 个 token
+            [ [13,14], [15,16], [17,18] ],     ← 第 2 个 token
+        ]
+        """
+        x_unflatten = x.unflatten(-1,(-1,2))
+        
+        """
+        按照奇偶拆分开
+        even = 每组的第 0 个元素：
+        [
+            [ 1,  3,  5],
+            [ 7,  9, 11],
+            [13, 15, 17],
+        ]
+        odd = 每组的第 1 个元素：
+        [
+            [ 2,  4,  6],
+            [ 8, 10, 12],
+            [14, 16, 18],
+        ]
+        """
+        even, odd = x_unflatten.unbind(-1)
+        
+        """
+        先奇偶互换，然后压缩最后两维
+        stack 后的结果：
+        [
+            [ [-2,  1], [-4,  3], [ -6,  5] ],     ← 第 0 个 token
+            [ [-8,  7], [-10, 9], [-12, 11] ],     ← 第 1 个 token
+            [ [-14,13], [-16,15], [-18, 17] ],     ← 第 2 个 token
+        ]
+        flatten 后：
+        [
+            [ -2,  1,  -4,   3,  -6,   5],
+            [ -8,  7, -10,   9, -12,  11],
+            [-14, 13, -16,  15, -18,  17],
+        ]
+        
+        """
+        x_rotate_half = torch.stack((-odd, even), dim = -1).flatten(-2)
+        
+        rotated_x = x * cos_value + x_rotate_half * sin_value
+        
+        return rotated_x
+```
+
+参考：[Assignment 1，§3.4.3，公式 (8)、(9)，PDF 第 22–23 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。旋转矩阵截图也来自这一节。
+
+### 6. RMSNorm
+
+向量经过多层计算，数值尺度会变化。**RMSNorm** 对每个位置的向量计算均方根，用它做归一化，再乘一个可训练的缩放参数。
+
+把每个分量的计算展开，可以写成下面的公式。
+
+$$
+\operatorname{RMSNorm}(x)_i
+=\frac{x_i}{\sqrt{\frac{1}{D}\sum_{j=1}^{D}x_j^2+\epsilon}}\,g_i
+$$
+
+分母把最后一维的数值尺度归一化，$\epsilon$ 防止分母为零，$g_i$ 是每个分量自己的缩放参数，初始化为 1。整个过程保持输入形状不变。
+
+代码中的 `dim=-1` 表示只对最后一维计算，`keepdim=True` 保留这一维，方便广播。按照作业要求，先把输入转成 float32 再平方，最后转回原类型，降低低精度计算溢出的风险。
+
+下面是完整的 `RMSNorm` 实现。
+
+```python
+import torch
+import math
+
+
+class RMSNorm(torch.nn.Module):
+    def __init__(self, d_model: int, eps: float = 1e-5, device=None, dtype=None):
+        super().__init__()
+        
+        # d_model 模型 token 维度；weight 用于最后做缩放，维度要和 d_model 一致
+        # eps 用于防止分母为 0
+        
+        self.weight = torch.nn.Parameter(
+            torch.ones(
+                d_model,
+                device = device,
+                dtype = dtype
+            )
+        )
+        self.eps = eps
+        pass
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # 按照 pdf 的要求，入参 x 需要先转到 32 位
+        in_dtype = x.dtype
+        x_float32 = x.to(torch.float32)
+        
+        # 应用公式
+        # 注意 mean 只需要对最后维度求平均，keepdim 表示需要保留维度，这里 mean 后的 shape 就是 (batch, seq_len, 1)
+        rms = torch.sqrt(
+            torch.mean(
+                torch.square(x_float32), 
+                dim = -1,
+                keepdim = True
+            ) + self.eps
+        )
+        # 注意这里是 * weight 而不是 @，因为是逐元素相乘缩放
+        # 这里计算需要注意一下 shape
+        # x_floagt32(batch, seq_len, d_model)，rms(batch, seq_len, 1)
+        # x_floagt32/rms 这里会用到 pytorch 里面的广播机制
+        # 广播：两个 shape 不完全一样的 tensor 做逐元素运算时，PyTorch 会在尺寸为 1 的维度上，自动“重复使用”那个值，让 shape 对齐。
+        result = (x_float32 / rms) * self.weight
+        
+        # 返回前转回原来的 dtype
+        return result.to(in_dtype)
+```
+
+参考：[Assignment 1，§3.4.1，公式 (4)，PDF 第 19–20 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
+
+### 7. 组装 Transformer
+
+前面的模块已经齐了，现在用 `TransformerBlock` 和 `TransformerLM` 把它们接起来。下面是这两个类的完整实现，可以和前面各模块的代码放在同一个 Python 文件里。
+
+```python
+import torch
+import math
+
+
+class TransformerBlock(torch.nn.Module):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, theta=None, max_seq_len=None, device=None, dtype=None):
+        super().__init__()
+        
+        # 初始化 MHA
+        self.attention = MultiheadSelfAttention(
+            d_model=d_model, 
+            num_heads=num_heads, 
+            theta=theta, 
+            max_seq_len=max_seq_len,
+            device=device,
+            dtype=dtype
+        )
+        
+        # 初始化 FF
+        self.ffn = SwiGLU(d_model=d_model, d_ff=d_ff, device=device, dtype=dtype)
+        
+        # 初始化两个 RMSNorm，分别用于 MHA、FF
+        self.norm1 = RMSNorm(d_model=d_model, device=device, dtype=dtype)
+        self.norm2 = RMSNorm(d_model=d_model, device=device, dtype=dtype)
+    
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor = None):
+        # 先进行 MHA 操作
+        x = x + self.attention(x=self.norm1(x), token_positions=token_positions)
+        # 再进行 FF 操作
+        x = x + self.ffn(x=self.norm2(x))
+        return x
+
+
+class TransformerLM(torch.nn.Module):
+    def __init__(self, vocab_size: int, nums_layer: int, d_model: int, num_heads: int, d_ff: int, 
+                 theta=None, max_seq_len=None, device=None, dtype=None):
+        
+        super().__init__()
+        
+        self.token_embedding = Embedding(vocab_size=vocab_size, d_model=d_model, device=device, dtype=dtype)
+        self.layers = torch.nn.ModuleList([
+            TransformerBlock(
+                d_model=d_model,
+                num_heads=num_heads,
+                d_ff=d_ff,
+                theta=theta,
+                max_seq_len=max_seq_len,
+                device=device,
+                dtype=dtype
+            )
+            for _ in range(nums_layer)
+        ])
+        
+        self.norm = RMSNorm(d_model=d_model,device=device,dtype=dtype)
+        
+        # 注意最后是把向量映射回词表
+        self.linear = Linear(in_features=d_model, out_features=vocab_size, device=device, dtype=dtype)
+        
+    def forward(self, token_ids: torch.Tensor):
+        batch_size, seq_len = token_ids.shape
+        
+        # 计算后 x.shape: (batch, size, d_model)
+        x = self.token_embedding(token_ids)
+        
+        # 需要构建一个 token positions，传递到 transformer block 里面给 rope 使用
+        # 比如
+        # batch_size = 2
+        # seq_len = 4
+        # [
+        #  [0, 1, 2, 3],
+        #  [0, 1, 2, 3],
+        # ]
+        token_positions = torch.arange(seq_len, device=token_ids.device).unsqueeze(0).expand(batch_size, seq_len)
+        
+        # 计算后 x.shape: (batch, size, d_model)
+        for layer in self.layers:
+            x = layer(x, token_positions)
+        
+        # 计算后 x.shape: (batch, size, d_model)
+        x = self.norm(x)
+        
+        # 这里要把向量通过 lm header 计算为词表分数
+        # 计算后 x.shape: (batch, size, vocab_size)
+        x = self.linear(x)
+        
+        return x
+```
+
+先看 `TransformerBlock.forward()`。一个 Block 的计算可以写成：
+
+$$
+\begin{aligned}
+h &= x+\operatorname{Attention}(\operatorname{RMSNorm}_1(x))\\
+y &= h+\operatorname{SwiGLU}(\operatorname{RMSNorm}_2(h))
+\end{aligned}
+$$
+
+两个子层都先归一化，再计算，最后加回输入。这里的 Attention 指前面实现的完整多头自注意力模块。
+
+这两次残差相加，都在 `TransformerBlock.forward()` 里完成。
+
+Attention 和 SwiGLU 都保持 `(B, S, D)` 的形状，所以可以直接与输入相加。`norm1`、`norm2` 是两个独立的 RMSNorm，各自有缩放参数。
+
+![pre-norm 残差结构](./block.svg)
+
+完整模型前面接 Embedding，中间重复多个 Block，最后接 RMSNorm 和输出 Linear。沿着 `TransformerLM.forward()` 就能看到这条完整的数据流。
+
+这里的 `self.linear` 就是 LM head，把每个位置的 `D` 个数映射成词表中 `V` 个 token 的分数。模型返回的是 logits，计算 loss 或生成文字时再使用它们。
+
+#### 参数量和计算量
+
+假设词表大小为 `V`、模型宽度为 `D`、Block 数量为 `L`，前馈网络隐藏宽度为 `d_ff`。当所有 Linear 都不带偏置，输入 Embedding 和输出 Linear 不共享权重时，参数量是：
+
+$$
+N=2VD+L\left(4D^2+3D\,d_{ff}+2D\right)+D
+$$
+
+`2VD` 来自输入、输出两张权重表。每个 Block 内，Attention 的四个投影占 $4D^2$，SwiGLU 占 $3D\,d_{ff}$，两个 RMSNorm 占 $2D$；最后再加上模型末尾 RMSNorm 的 `D` 个参数。
+
+`(m, n)` 乘 `(n, p)`，大约需要 $2mnp$ 次浮点运算。Attention 的分数矩阵有 `S × S` 个元素，所以序列越长，这部分计算越贵。
+
+#### 怎么确认它接通了
+
+我们可以先检查输出形状是否为 `(B, S, V)`，再改动输入的后半段，确认前半段的 logits 不变。这能检查因果遮罩是否生效。
+
+形状测试要覆盖不同的 batch 和 head 数量，例如 `B=2、H=4`，避免尺寸恰好相等时掩盖广播错误。每个模块也可以分别对照作业提供的测试，定位问题会更直接。
+
+参考：[Assignment 1，§3.5，公式 (15)、资源计算说明，PDF 第 26–28 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
 
 ## 后记
 
