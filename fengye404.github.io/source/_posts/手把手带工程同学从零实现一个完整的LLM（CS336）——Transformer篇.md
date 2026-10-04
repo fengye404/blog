@@ -1025,9 +1025,11 @@ class Linear(torch.nn.Module):
 
 #### SwiGLU
 
-前面 TinyGPT 的前馈模块用的是 `Linear → GELU → Linear` 这样的普通 MLP。这里我们给前馈模块加入门控，使用 **SwiGLU** 结构，它也属于 MLP 的一种设计。两者都对每个 token 的向量分别计算，所有位置共享参数。
+前面 TinyGPT 的前馈模块用的是 `Linear → GELU → Linear` 这样的普通 MLP。这里再看另一种设计 **SwiGLU**。
 
-加入门控，是为了让网络根据当前输入，灵活地放大或抑制各个特征。[GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) 的 T5 预训练实验表明，在相近的参数量和计算量下，SwiGLU 比使用 ReLU、GELU 的普通前馈层取得了更低的困惑度。
+它让输入走两条分支，一条计算特征，另一条计算一组系数，然后把对应位置的数相乘。比如某个特征的值是 `4`，乘上 `0.5` 就变成 `2`，乘上 `0` 就被抑制了。**这种用一条分支的输出调节另一条分支的计算方式，叫作门控。**
+
+这些系数会随输入变化，让网络能灵活调节各个特征的强弱。[GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) 的 T5 预训练实验表明，在相近的参数量和计算量下，SwiGLU 比使用 ReLU、GELU 的普通前馈层取得了更低的困惑度。
 
 我们这次按 Assignment 1 实现 SwiGLU，也会适当缩小隐藏层宽度，让新增分支后的参数量与普通 FFN 接近。后面再看这个宽度怎么选。
 
@@ -1041,7 +1043,7 @@ $$
 
 ![SiLU 与 ReLU 对比，Assignment 1 Figure 3](./assignment1-silu-relu.png)
 
-同一个输入向量 `x` 会走两条分支。`W3` 生成一组特征，`W1` 的输出经过 SiLU，生成另一组数。**这组数会与特征逐元素相乘，调节每个分量的大小，这就是门控。** 两条分支的权重都通过训练学习，门控系数则随当前输入变化。
+在 SwiGLU 中，特征分支计算 `W3(x)`，门控分支计算 `SiLU(W1(x))`，两路的结果逐元素相乘，再交给 `W2`。两条分支的权重都通过训练学习。
 
 ![SwiGLU · 门控分支](./swiglu-gating.png)
 
