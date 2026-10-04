@@ -43,7 +43,9 @@ tags:
 
 ## 1. MLP
 
-在开始 Transformer 之前，需要先了解一个简单的神经网络是什么样的。这里从 MLP（Multi-Layer Perceptron，多层感知机）开始，它是一种最基础的神经网络。我们先用它做一个小实验，看看数据怎么输入、模型怎么得到预测结果，以及训练到底是在做什么。
+在开始 Transformer 之前，需要先了解一个简单的神经网络是什么样的。这里从 MLP（Multi-Layer Perceptron，多层感知机）开始，它是一种最基础的**前馈网络（Feed-Forward Network，FFN）**。“前馈”指数据从输入出发，依次经过各层计算得到输出，网络中没有形成循环的连接。
+
+我们先用它做一个小实验，看看数据怎么输入、模型怎么得到预测结果，以及训练到底是在做什么。
 
 ### 线性回归
 
@@ -1020,8 +1022,6 @@ class Linear(torch.nn.Module):
 ```
 
 #### SwiGLU
-
-前面写过的 MLP 就是一种**前馈网络（Feed-Forward Network，FFN）**。“前馈”描述的是计算时数据的流向——从输入出发，依次经过各层得到输出，网络中没有把输出送回前面形成循环的连接。我们用过的 `Linear → Tanh → Linear` 就是这样的结构。
 
 在 Transformer 里，FFN 对每个 token 的向量分别做非线性变换，所有位置共用同一组参数。前面的 TinyGPT 已经用 MLP 完成了这一步；这里换成 **SwiGLU**，在 Linear 和激活函数的基础上增加门控分支。
 
