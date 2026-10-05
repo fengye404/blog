@@ -1025,11 +1025,11 @@ class Linear(torch.nn.Module):
 
 #### SwiGLU
 
-前面 TinyGPT 的前馈模块用的是 `Linear → GELU → Linear` 这样的普通 MLP。这里再看另一种设计 **SwiGLU**。
+前面 TinyGPT 的前馈模块用的是 `Linear → GELU → Linear` 这样的普通 MLP。Assignment1 里面要求的是另一种 MLP：**SwiGLU**。
 
 它让输入走两条分支，一条计算特征，另一条计算一组系数，然后把对应位置的数相乘。比如某个特征的值是 `4`，乘上 `0.5` 就变成 `2`，乘上 `0` 就被抑制了。**这种用一条分支的输出调节另一条分支的计算方式，叫作门控。**
 
-这些系数会随输入变化，让网络能灵活调节各个特征的强弱。[GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) 的 T5 预训练实验表明，在相近的参数量和计算量下，SwiGLU 比使用 ReLU、GELU 的普通前馈层取得了更低的困惑度。
+这些系数会随输入变化，让网络能灵活调节各个特征的强弱。[GLU Variants Improve Transformer](https://arxiv.org/abs/2002.05202) 的 T5 预训练实验表明，在相近的参数量和计算量下，SwiGLU 比使用 ReLU、GELU 的普通前馈层取得了更低的**困惑度（perplexity）**。困惑度用来衡量模型对真实文本的预测表现；用自然对数计算平均交叉熵损失时，它等于 `exp(loss)`。在相同测试文本和分词方式下，数值越低，说明模型整体上给真实答案分配的概率越高。
 
 我们这次按 Assignment 1 实现 SwiGLU，也会适当缩小隐藏层宽度，让新增分支后的参数量与普通 FFN 接近。后面再看这个宽度怎么选。
 
