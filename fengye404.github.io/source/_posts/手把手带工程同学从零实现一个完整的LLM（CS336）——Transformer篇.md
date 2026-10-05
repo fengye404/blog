@@ -108,6 +108,10 @@ y = w2 * h + b2
 
 所以我们在 Linear 之间加入非线性的激活函数，让网络能拟合曲线。这里用 `Tanh`，它把输入映射到 -1 到 1 之间，函数图像是一条 S 形曲线。
 
+下面是几种常见激活函数的曲线，横轴是输入，纵轴是输出。我们这里先用 Tanh，后面的 TinyGPT 和 SwiGLU 还会分别用到 GELU、SiLU。
+
+![常见激活函数](./activation-functions.png)
+
 ```python
 # Sequential 按顺序执行，上一层的输出交给下一层
 model = nn.Sequential(
