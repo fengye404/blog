@@ -1110,7 +1110,7 @@ class SwiGLU(torch.nn.Module):
 
 前面的 Linear 和 SwiGLU 都分别处理每个 token 的向量。**Attention 让不同 token 的信息联系起来**：为可以读取的各个 token 计算权重，再按权重汇总它们的信息。这样，同一个 token 在不同语境中就可以得到不同的向量表示。
 
-![Attention · 语境与词义](./attention-context-unified.gif)
+![Attention · 语境与词义](./attention-context-smooth.gif)
 
 接下来就用“这款新手机来自苹果”拆开看。为了方便演示，假设它被切成 `这款 / 新 / 手机 / 来自 / 苹果` 五个 token。我们先看“苹果”怎样读取前文的信息，得到结合了当前语境的表示。
 
@@ -1173,7 +1173,7 @@ $$
 
 把这几步连起来看：先用 Q、K 算出分数，遮住未来的 token，再用 softmax 得到权重。图中每一行对应一个读取者；最后展开“苹果”这一行，把五个权重分别乘到对应的 V 上，再将结果相加。
 
-![Attention · 权重与向量](./attention-qkv-unified.gif)
+![Attention · 权重与向量](./attention-qkv-smooth.gif)
 
 图中的数值用于演示，沿用前面的手算例子；显示时做了四舍五入，求和使用未舍入的数值。
 
