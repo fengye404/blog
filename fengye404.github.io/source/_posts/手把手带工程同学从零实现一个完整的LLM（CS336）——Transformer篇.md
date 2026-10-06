@@ -1740,26 +1740,37 @@ class TransformerLM(torch.nn.Module):
         return x
 ```
 
-先看 `TransformerBlock.forward()`。一个 Block 的计算可以写成：
+先看 `TransformerBlock.forward()`。按照作业 PDF §3.5，一个 Block 包含多头自注意力和 SwiGLU 两个子层，都是**先归一化，再计算，最后加回该子层的输入**。
+
+第一个子层对应 PDF 的公式 (15)，输入 $x$，得到中间结果 $y$：
 
 $$
-\begin{aligned}
-h &= x+\operatorname{Attention}(\operatorname{RMSNorm}_1(x))\\
-y &= h+\operatorname{SwiGLU}(\operatorname{RMSNorm}_2(h))
-\end{aligned}
+y=x+\operatorname{MultiHeadSelfAttention}(\operatorname{RMSNorm}_1(x))
 $$
 
-两个子层都先归一化，再计算，最后加回输入。这里的 Attention 指前面实现的完整多头自注意力模块。
+这里的 MultiHeadSelfAttention 就是前面实现的完整多头自注意力模块。第二个子层接着处理 $y$，得到 Block 的输出 $z$：
+
+$$
+z=y+\operatorname{SwiGLU}(\operatorname{RMSNorm}_2(y))
+$$
 
 **这里“加回输入”的操作就是残差连接：$y=x+F(x)$。** 输入 $x$ 沿着一条直通路径保留下来，子层算出更新量 $F(x)$，再把两者逐元素相加。这样每层可以在已有表示上做调整；反向传播时，梯度也能沿直通路径传回前面的层，有助于训练更深的网络。这两次相加都在 `TransformerBlock.forward()` 里完成。
 
-Attention 和 SwiGLU 都保持 `(B, S, D)` 的形状，所以可以直接与输入相加。`norm1`、`norm2` 是两个独立的 RMSNorm，各自有缩放参数。
+两个子层的输入、输出都是 `(batch_size, seq_len, d_model)`，所以可以逐元素相加。`norm1`、`norm2` 是两个独立的 RMSNorm，各自有缩放参数。
 
 ![pre-norm 残差结构](./block.svg)
 
-完整模型前面接 Embedding，中间重复多个 Block，最后接 RMSNorm 和输出 Linear。沿着 `TransformerLM.forward()` 就能看到这条完整的数据流。
+再看 `TransformerLM.forward()`。PDF 将完整模型分成三步：先把 token ID 转成向量，依次经过 `num_layers` 个 Block，最后归一化并映射到词表。把这个过程写出来就是：
 
-这里的 `self.linear` 就是 LM head，把每个位置的 `D` 个数映射成词表中 `V` 个 token 的分数。模型返回的是 logits，计算 loss 或生成文字时再使用它们。
+$$
+\begin{aligned}
+x^{(0)} &= \operatorname{Embedding}(\text{token IDs})\\
+x^{(\ell)} &= \operatorname{Block}_{\ell}(x^{(\ell-1)}),\quad \ell=1,\ldots,L\\
+\text{logits} &= \operatorname{LMHead}(\operatorname{RMSNorm}(x^{(L)}))
+\end{aligned}
+$$
+
+$L$ 就是 `num_layers`，$x^{(\ell)}$ 表示经过第 $\ell$ 个 Block 后的向量。LM head 对应代码中的 `self.linear`，把每个 token 的 `d_model` 个数映射成 `vocab_size` 个词表分数。因此，整体 shape 从 `(batch_size, seq_len)` 变成 `(batch_size, seq_len, d_model)`，最后输出 `(batch_size, seq_len, vocab_size)` 的 logits。logits 是未经 softmax 的分数，后续用于计算 loss 或生成下一个 token。
 
 #### 参数量和计算量
 
