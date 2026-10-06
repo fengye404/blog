@@ -1134,7 +1134,7 @@ class SwiGLU(torch.nn.Module):
 
 **v 是实际传递的信息。** “手机”的权重越大，它的 v 对最终结果的贡献就越大。我们用 q、k 算“关注谁、关注多少”，用 v 提供“拿到什么信息”。
 
-![Q、K、V · 线索与信息](./qkv-concise.png)
+![Q、K、V · 线索与信息](./qkv-labels.png)
 
 图中的缩放因子通常取 $\sqrt{d_k}$，其中 `d_k` 是 q、k 向量的分量个数。本例各有两个分量，所以缩放因子是 $\sqrt{2}$。向量越长，点积累加的项越多，分数的波动通常也越大；缩放可以避免 softmax 过早把权重集中到少数 token 上，让训练更稳定。
 
@@ -1150,7 +1150,7 @@ class SwiGLU(torch.nn.Module):
 
 沿用上面的示例，5 个 token 的 q、k、v 都用两个分量表示，因此 Q、K、V 的 shape 都是 `(5, 2)`。K 转置后，每一列就是一个 token 的 k。图中突出“苹果”这一行，其他行也按同样的方式计算。
 
-![Attention · 整句话一起计算](./attention-matrix.png)
+![Attention · 整句话一起计算](./attention-matrix-labels.png)
 
 **分数表的每一行代表谁在读取信息，每一列代表从谁那里读取。** 比如第 5 行就是“苹果”对五个 token 的匹配分数。这样，公式里的每一步就能和刚才的计算对应起来：
 
