@@ -1767,36 +1767,36 @@ $L$ 是 Block 的数量，$x^{(\ell)}$ 是第 $\ell$ 个 Block 的输出。LM he
 
 最后用一道资源核算题，把前面各个模块的参数量和计算量串起来。
 
-> **Transformer LM 资源核算（`transformer_accounting`，5 分）**
+> **Problem (`transformer_accounting`): Transformer LM resource accounting (5 points)**
 >
-> **(a)** 使用前面实现的架构，构建一个 GPT-2 XL 规模的模型，配置如下：
+> **(a)** Consider a GPT-2 XL-sized model using our assignment architecture, which has the following configuration:
 >
-> ```text
-> vocab_size:     50,257
-> context_length: 1,024
-> num_layers:     48
-> d_model:        1,600
-> num_heads:      25
-> d_ff:           4,288
-> ```
+> - **vocab_size:** 50,257
+> - **context_length:** 1,024
+> - **num_layers:** 48
+> - **d_model:** 1,600
+> - **num_heads:** 25
+> - **d_ff:** 4,288 (the nearest multiple of 64 to $\frac{8}{3} \times 1,600$)
 >
-> 其中，`d_ff` 是最接近 $\frac{8}{3} \times 1600$ 的 64 的倍数。这个模型有多少可训练参数？假设每个参数都用单精度浮点数（float32）存储，仅加载模型参数需要多少内存？用一两句话回答。
+> Suppose we constructed our model using this configuration. How many trainable parameters would our model have? Assuming each parameter is represented using single-precision floating point, how much memory is required to just load this model?
 >
-> **(b)** 输入序列包含 `context_length` 个 token。列出模型完成一次前向传播所需的所有矩阵乘法，说明各自的作用，并计算这些矩阵乘法总共需要多少 FLOPs（浮点运算次数）。
+> **Deliverable:** A one-to-two sentence response.
 >
-> **(c)** 根据上面的分析，模型的哪些部分消耗的 FLOPs 最多？用一两句话回答。
+> **(b)** Identify the matrix multiplies required to complete a forward pass of our GPT-2 XL-shaped model. How many FLOPs do these matrix multiplies require in total? Assume that our input sequence has `context_length` tokens.
 >
-> **(d)** 换成以下规模，重复上述分析：
+> **Deliverable:** A list of matrix multiplies (with descriptions), and the total number of FLOPs required.
 >
-> | 模型规模 | `num_layers` | `d_model` | `num_heads` |
-> | --- | ---: | ---: | ---: |
-> | GPT-2 small | 12 | 768 | 12 |
-> | GPT-2 medium | 24 | 1,024 | 16 |
-> | GPT-2 large | 36 | 1,280 | 20 |
+> **(c)** Based on your analysis above, which parts of the model require the most FLOPs?
 >
-> 分别列出各个组件的 FLOPs 占总量的比例，并用一两句话说明：随着模型规模增大，哪些部分的计算量占比上升，哪些下降？
+> **Deliverable:** A one-to-two sentence response.
 >
-> **(e)** 将 GPT-2 XL 规模模型的上下文长度增加到 16,384，一次前向传播的总 FLOPs 如何变化？各个组件的计算量占比又如何变化？用一两句话回答。
+> **(d)** Repeat your analysis with GPT-2 small (12 layers, 768 d_model, 12 heads), GPT-2 medium (24 layers, 1024 d_model, 16 heads), and GPT-2 large (36 layers, 1280 d_model, 20 heads). As the model size increases, which parts of the Transformer LM take up proportionally more or less of the total FLOPs?
+>
+> **Deliverable:** For each model, provide a breakdown of model components and its associated FLOPs (as a proportion of the total FLOPs required for a forward pass). In addition, provide a one-to-two sentence description of how varying the model size changes the proportional FLOPs of each component.
+>
+> **(e)** Take GPT-2 XL and increase the context length to 16,384. How does the total FLOPs for one forward pass change? How does the relative contribution of FLOPs of the model components change?
+>
+> **Deliverable:** A one-to-two sentence response.
 
 假设词表大小为 `V`、每个 token 的向量维数为 `D`（即 `d_model`）、Block 数量为 `L`，前馈网络的中间层维数为 `d_ff`。当所有 Linear 都不带偏置，输入 Embedding 和输出 Linear 不共享权重时，参数量是：
 
