@@ -1179,7 +1179,7 @@ $$
 
 下面用两个头展开“苹果”的计算，每个头的 q、k、v 都有 2 个分量。图中的数值用于演示；“苹果”位于句末，可以读取全部五个 token。
 
-![Attention · 多个头分别计算，再合起来](./attention-multihead-shapes-simple.png)
+![Attention · 多个头分别计算，再合起来](./attention-multihead-shapes-clear.png)
 
 
 把图里的过程写成公式，就是：
