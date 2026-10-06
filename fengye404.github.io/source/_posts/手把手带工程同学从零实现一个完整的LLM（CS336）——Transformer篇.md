@@ -1110,7 +1110,7 @@ class SwiGLU(torch.nn.Module):
 
 前面的 Linear 和 SwiGLU 都分别处理每个 token 的向量。**Attention 让不同 token 的信息联系起来**：为可以读取的各个 token 计算权重，再按权重汇总它们的信息。这样，同一个 token 在不同语境中就可以得到不同的向量表示。
 
-![Attention · 语境与词义](./attention-context-v2.gif)
+![Attention · 语境与词义](./attention-context-clean.gif)
 
 接下来就用“这款新手机来自苹果”拆开看。为了方便演示，假设它被切成 `这款 / 新 / 手机 / 来自 / 苹果` 五个 token。我们先看“苹果”怎样读取前文的信息，得到结合了当前语境的表示。
 
