@@ -1569,7 +1569,7 @@ class MultiheadSelfAttention(torch.nn.Module):
 
 **每个 token 都有自己的 RMS。** 一个 token 的向量里有 $D$ 个数，就用这 $D$ 个数计算它的 RMS，再用这个 RMS 归一化该向量。不同 token 分别计算，可以并行完成。
 
-**先算 RMS（Root Mean Square，均方根）。** 设这个向量为 $x=(x_1,\ldots,x_D)$，把所有分量分别平方、求平均，再开根号，就得到衡量整体大小的一个数。按照作业 PDF 的写法，根号内还加上小常数 $\epsilon$：
+**先算 RMS（Root Mean Square，均方根）。** 设这个向量为 $x=(x_1,\ldots,x_D)$，把所有分量分别平方、求平均，再开根号，就得到衡量整体大小的一个数。为避免后面除以零，根号内还加上小常数 $\epsilon$：
 
 $$
 \operatorname{RMS}(x)=\sqrt{\frac{1}{D}\sum_{j=1}^{D}x_j^2+\epsilon}
@@ -1621,7 +1621,7 @@ class RMSNorm(torch.nn.Module):
         self.eps = eps
         pass
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # 按照 pdf 的要求，入参 x 需要先转到 32 位
+        # 先转成 float32，降低平方时溢出的风险
         in_dtype = x.dtype
         x_float32 = x.to(torch.float32)
         
@@ -1740,9 +1740,9 @@ class TransformerLM(torch.nn.Module):
         return x
 ```
 
-先看 `TransformerBlock.forward()`。按照作业 PDF §3.5，一个 Block 包含多头自注意力和 SwiGLU 两个子层，都是**先归一化，再计算，最后加回该子层的输入**。
+先看 `TransformerBlock.forward()`。一个 Block 包含多头自注意力和 SwiGLU 两个子层，都是**先归一化，再计算，最后加回该子层的输入**。
 
-第一个子层对应 PDF 的公式 (15)，输入 $x$，得到中间结果 $y$：
+第一个子层处理输入 $x$，得到中间结果 $y$：
 
 $$
 y=x+\operatorname{MultiHeadSelfAttention}(\operatorname{RMSNorm}_1(x))
@@ -1760,7 +1760,7 @@ $$
 
 ![pre-norm 残差结构](./block.svg)
 
-再看 `TransformerLM.forward()`。PDF 将完整模型分成三步：先把 token ID 转成向量，依次经过 `num_layers` 个 Block，最后归一化并映射到词表。把这个过程写出来就是：
+再看 `TransformerLM.forward()`。完整模型的计算分成三步：先把 token ID 转成向量，依次经过 `num_layers` 个 Block，最后归一化并映射到词表。把这个过程写出来就是：
 
 $$
 \begin{aligned}
