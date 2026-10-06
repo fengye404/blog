@@ -495,8 +495,6 @@ x = x + self.mlp(self.ln2(x))
 
 这里的“位置”就是字符在序列里的下标。比如 `agent` 中，`a` 在位置 0，`g` 在位置 1，依次类推。TinyGPT 除了查字符的 Embedding，还会用这个下标查 `position_embedding`，把两个向量相加后送进 Transformer。同一个字符出现在不同位置时，就会得到不同的初始表示。
 
-位置 Embedding 提供“排在第几个”的信息；因果遮罩限制“能读取哪些字符”，让模型只能读取自己和前面的内容。两者在 TinyGPT 中一起使用。
-
 具体的 attention 机制会在后面详细介绍。
 
 ### 训练
@@ -1100,9 +1098,9 @@ class SwiGLU(torch.nn.Module):
 
 ### 4. Attention
 
-前面的 Linear 和 SwiGLU 都分别处理每个 token 自己的向量。**Attention 让一个 token 汇集其他 token 的信息，得到包含上下文的新向量。** 这里说的“位置”，就是 token 在序列中的下标，比如一段文本的第 0、1、2 个 token。
+前面的 Linear 和 SwiGLU 都分别处理每个 token 自己的向量。**Attention 让一个 token 汇集其他 token 的信息，得到包含上下文的新向量。** 汇集时，各个 token 的贡献可以不同，Attention 会为它们计算权重，再按权重把信息加起来。
 
-我们先实现基础的 Attention，下一节再加入 RoPE 位置编码。先看 token 之间怎样计算权重、汇总信息。输入向量经过三个 Linear，得到 **Q、K、V**。每个 token 的 Q 用来和允许读取的各个 token 的 K 计算匹配分数，V 是最后要加权汇总的信息。
+这些权重由输入向量计算得到。每个 token 的向量分别经过三个 Linear，得到 **Q、K、V**。Q 和其他 token 的 K 计算匹配分数，分数通过 softmax 转成权重，再用这些权重对 V 加权求和。
 
 注意，Q、K、V 都是计算出来的中间结果；三个 Linear 里的权重才是训练时更新的参数。
 
@@ -1128,7 +1126,7 @@ $$
 
 #### 因果遮罩
 
-预测下一个 token 时，只能使用当前位置及之前的信息。因此，先把未来位置的分数设成负无穷，再做 softmax，这些位置的权重就会变成 0。
+预测下一个 token 时，只能读取自己和前面的 token。我们按序列顺序给 token 编号 `0、1、2……`，这些下标就是它们的位置。例如位置 2 可以读取位置 0、1、2，后面的 token 都要屏蔽。实现时，先把未来位置的分数设成负无穷，再做 softmax，这些位置的权重就会变成 0。
 
 代码里的 `mask` 中 True 表示允许读取，False 表示屏蔽。
 
