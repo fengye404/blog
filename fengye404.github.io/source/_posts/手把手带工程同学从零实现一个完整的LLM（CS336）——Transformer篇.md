@@ -1102,7 +1102,7 @@ class SwiGLU(torch.nn.Module):
 
 前面的 Linear 和 SwiGLU 都分别处理每个 token 的向量。**Attention 让不同 token 的信息联系起来**：为可以读取的各个 token 计算权重，再按权重汇总它们的信息。这样，同一个 token 在不同语境中就可以得到不同的向量表示。
 
-![Attention · 上下文](./attention-context.gif)
+![Attention · 语境与词义](./attention-context-v2.gif)
 
 图中向量为语义示意，包含 Attention 输出投影后的残差相加。
 
