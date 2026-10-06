@@ -240,7 +240,7 @@ if __name__ == "__main__":
     main()
 ```
 
-## 2. 语言模型基础
+## 2. 语言模型基础-TinyGPT
 
 前面我们用 MLP，根据输入的 x 预测一个数。接下来换个任务：给模型一段文字，让它预测下一个字。比如输入「今天天气」，模型接着生成「很」，再把「今天天气很」作为输入，继续预测。这样反复进行，就能逐步生成一段文字。
 
@@ -1098,9 +1098,7 @@ class SwiGLU(torch.nn.Module):
 
 ### 4. Attention
 
-前面 TinyGPT 预测 `agent` 后面的字符时，需要结合 `a、g、e、n、t` 的信息。我们当时说过，Attention 会为这些字符计算权重，再按权重汇总。这里就把这个过程拆开看，继续沿用每个字符是一个 token 的例子。
-
-经过 Embedding，每个 token 已经有了一个向量。刚才实现的 Linear 和 SwiGLU 都分别处理这些向量；Attention 会把多个 token 的信息汇集到一起。我们先看最后一个 `t` 怎样完成这次计算。
+沿用 TinyGPT 的 `agent` 示例，每个字符是一个 token。我们先看 Attention 怎样让最后一个 `t` 按权重汇集 `a、g、e、n、t` 的信息。
 
 #### Q、K、V
 
