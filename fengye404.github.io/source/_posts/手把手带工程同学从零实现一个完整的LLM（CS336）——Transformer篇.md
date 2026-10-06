@@ -1798,7 +1798,7 @@ $L$ 是 Block 的数量，$x^{(\ell)}$ 是第 $\ell$ 个 Block 的输出。LM he
 >
 > **(e)** 将 GPT-2 XL 规模模型的上下文长度增加到 16,384，一次前向传播的总 FLOPs 如何变化？各个组件的计算量占比又如何变化？用一两句话回答。
 
-假设词表大小为 `V`、模型宽度为 `D`、Block 数量为 `L`，前馈网络隐藏宽度为 `d_ff`。当所有 Linear 都不带偏置，输入 Embedding 和输出 Linear 不共享权重时，参数量是：
+假设词表大小为 `V`、每个 token 的向量维数为 `D`（即 `d_model`）、Block 数量为 `L`，前馈网络的中间层维数为 `d_ff`。当所有 Linear 都不带偏置，输入 Embedding 和输出 Linear 不共享权重时，参数量是：
 
 $$
 N=2VD+L\left(4D^2+3D\,d_{ff}+2D\right)+D
