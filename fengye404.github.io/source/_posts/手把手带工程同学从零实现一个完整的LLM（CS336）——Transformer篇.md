@@ -1098,7 +1098,9 @@ class SwiGLU(torch.nn.Module):
 
 ### 4. Attention
 
-沿用 TinyGPT 的 `agent` 示例，每个字符是一个 token。我们先看 Attention 怎样让最后一个 `t` 按权重汇集 `a、g、e、n、t` 的信息。
+前面的 Linear 和 SwiGLU 都分别处理每个 token 的向量。**Attention 则让 token 之间交换信息**：它为可以读取的各个 token 计算权重，再按权重汇总它们的信息，得到包含上下文的新向量。
+
+沿用 TinyGPT 的 `agent` 示例，每个字符是一个 token。预测后面的字符时，最后一个 `t` 需要结合 `a、g、e、n、t` 的信息。下面就从 `t` 出发，看这些权重怎样算出来，以及信息怎样汇总。
 
 #### Q、K、V
 
