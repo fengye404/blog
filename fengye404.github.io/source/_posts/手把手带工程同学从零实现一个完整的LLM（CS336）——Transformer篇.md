@@ -1740,27 +1740,18 @@ class TransformerLM(torch.nn.Module):
         return x
 ```
 
-先看 `TransformerBlock.forward()`。一个 Block 包含多头自注意力和 SwiGLU 两个子层，都是**先归一化，再计算，最后加回该子层的输入**。
-
-第一个子层处理输入 $x$，得到中间结果 $y$：
+一个 Block 的计算可以写成：
 
 $$
-y=x+\operatorname{MultiHeadSelfAttention}(\operatorname{RMSNorm}_1(x))
+\begin{aligned}
+y &= x+\operatorname{MultiHeadSelfAttention}(\operatorname{RMSNorm}_1(x))\\
+z &= y+\operatorname{SwiGLU}(\operatorname{RMSNorm}_2(y))
+\end{aligned}
 $$
 
-这里的 MultiHeadSelfAttention 就是前面实现的完整多头自注意力模块。第二个子层接着处理 $y$，得到 Block 的输出 $z$：
+$x$ 是输入，$y$ 是中间结果，$z$ 是输出。**残差连接就是把输入与子层的计算结果逐元素相加，即 $x+F(x)$。** 子层在原有表示上增加更新，梯度也能沿这条直通路径传回前面的层，有助于训练更深的网络。
 
-$$
-z=y+\operatorname{SwiGLU}(\operatorname{RMSNorm}_2(y))
-$$
-
-**这里“加回输入”的操作就是残差连接：$y=x+F(x)$。** 输入 $x$ 沿着一条直通路径保留下来，子层算出更新量 $F(x)$，再把两者逐元素相加。这样每层可以在已有表示上做调整；反向传播时，梯度也能沿直通路径传回前面的层，有助于训练更深的网络。这两次相加都在 `TransformerBlock.forward()` 里完成。
-
-两个子层的输入、输出都是 `(batch_size, seq_len, d_model)`，所以可以逐元素相加。`norm1`、`norm2` 是两个独立的 RMSNorm，各自有缩放参数。
-
-![pre-norm 残差结构](./block.svg)
-
-再看 `TransformerLM.forward()`。完整模型的计算分成三步：先把 token ID 转成向量，依次经过 `num_layers` 个 Block，最后归一化并映射到词表。把这个过程写出来就是：
+完整模型的计算为：
 
 $$
 \begin{aligned}
@@ -1770,7 +1761,7 @@ x^{(\ell)} &= \operatorname{Block}_{\ell}(x^{(\ell-1)}),\quad \ell=1,\ldots,L\\
 \end{aligned}
 $$
 
-$L$ 就是 `num_layers`，$x^{(\ell)}$ 表示经过第 $\ell$ 个 Block 后的向量。LM head 对应代码中的 `self.linear`，把每个 token 的 `d_model` 个数映射成 `vocab_size` 个词表分数。因此，整体 shape 从 `(batch_size, seq_len)` 变成 `(batch_size, seq_len, d_model)`，最后输出 `(batch_size, seq_len, vocab_size)` 的 logits。logits 是未经 softmax 的分数，后续用于计算 loss 或生成下一个 token。
+$L$ 是 Block 的数量，$x^{(\ell)}$ 是第 $\ell$ 个 Block 的输出。LM head 将每个 token 的向量映射为词表分数 logits，尚未经过 softmax。
 
 #### 参数量和计算量
 
