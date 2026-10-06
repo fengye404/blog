@@ -1102,7 +1102,14 @@ class SwiGLU(torch.nn.Module):
 
 前面的 Linear 和 SwiGLU 都分别处理每个 token 的向量。**Attention 让不同 token 的信息联系起来**：为可以读取的各个 token 计算权重，再按权重汇总它们的信息。这样，同一个 token 在不同语境中就可以得到不同的向量表示。
 
+<style>.attention-context-frame{display:block;width:100%;height:auto;aspect-ratio:1000/750;border:1px solid #dce3e9;border-radius:8px;background:#fff;}@media(max-width:600px){.attention-context-frame{aspect-ratio:390/910;}}</style>
+<iframe class="attention-context-frame" src="/animations/attention-context/index.html" title="Attention · 上下文动画" loading="lazy"></iframe>
+
+[独立播放动画](/animations/attention-context/index.html) · [查看静态图](./attention-context-preview.png)。动画用示意向量展示上下文如何改变表示，包含 Attention 输出投影后的残差相加；表现方式参考 [3Blue1Brown 的 Attention 视频](https://www.bilibili.com/video/BV1TZ421j7Ke/)。
+
 回到 TinyGPT 的 `agent` 示例：模型要根据这五个字符预测接下来的字符。前面的代码会取序列最后一个位置的输出，用它计算下一个字符的概率。因此，这个位置的向量需要包含前面几个字符的信息。下面我们就看，Attention 怎样把 `a、g、e、n、t` 的信息汇总到最后一个位置。
+
+> 如果觉得这块内容比较抽象，推荐看一下 3Blue1Brown 的视频，动画演示会清晰很多：https://www.bilibili.com/video/BV1TZ421j7Ke
 
 #### Q、K、V
 
