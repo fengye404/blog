@@ -1181,6 +1181,20 @@ $$
 
 ![Attention · 多个头分别计算，再合起来](./attention-multihead-detail.png)
 
+
+把图里的过程写成公式，就是：
+
+$$
+\begin{aligned}
+Q &= XW_Q^{\mathsf T},\quad K = XW_K^{\mathsf T},\quad V = XW_V^{\mathsf T} \\
+\mathrm{head}_i &= \mathrm{Attention}(Q_i,K_i,V_i) \\
+\mathrm{MultiHead}(Q,K,V) &= \mathrm{Concat}(\mathrm{head}_1,\ldots,\mathrm{head}_H) \\
+\mathrm{MultiHeadSelfAttention}(X) &= \mathrm{MultiHead}(Q,K,V)W_O^{\mathsf T}
+\end{aligned}
+$$
+
+其中 $Q_i,K_i,V_i$ 是分给第 $i$ 个头的那部分向量；每个头都按前面介绍的方法计算 Attention，并使用因果遮罩。$\mathrm{Concat}$ 把各个头的输出沿最后一维拼接，$W_O$ 对应图中最后的输出 Linear。
+
 实现时，我们先用三个 Linear 生成完整的 Q、K、V，再把最后一维拆成 `H` 份，每份交给一个头。这相当于把各个头的投影合在一次矩阵计算里。`H` 是头数，每个头的向量长度为 `d_k = D / H`，因此 `D` 要能被 `H` 整除。
 
 假设一批有 2 段文本，每段 5 个 token，模型宽度 `D=64`，使用 `H=4` 个头，每个头就处理 16 个分量。
