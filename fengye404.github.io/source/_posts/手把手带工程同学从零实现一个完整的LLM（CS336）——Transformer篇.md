@@ -23,11 +23,11 @@ tags:
 
 > 先叠个甲，我之前的背景是纯工程开发，大概在 25 年初开始转向 Agent 开发，此前也没有过系统的机器学习、神经网络学习经验，因此我学习 CS336 的过程也是逐渐查漏补缺，即用即学，如果专业的算法同学发现文章有不当之处，欢迎指正
 
-学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Transformer（注：非 Attention Is All You Need 原始论文版本，，其中会引入 RoPE、SwiGLU 等变体，这也是 CS336 这门课程的优秀之处）。
+学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Transformer（注：非 Attention Is All You Need 原始论文版本，其中会引入 RoPE、SwiGLU 等变体，这也是 CS336 这门课程的优秀之处）。
 
 > Assignment1 的原始资料：[stanford-cs336/assignment1-basics](https://github.com/stanford-cs336/assignment1-basics/tree/main)
 
-如果你也想学习 LLM 的底层原理，强烈建议跟着本篇文章，独立认真完成 Assignment 1（注：CS336 的 Assigment 中都会附带一份 AGENTS.md，以防你的 coding agent 直接帮你一键完成作业）
+如果你也想学习 LLM 的底层原理，强烈建议跟着本篇文章，独立认真完成 Assignment 1（注：CS336 的 Assignment 中都会附带一份 AGENTS.md，以防你的 coding agent 直接帮你一键完成作业）
 
 为了先建立对于神经网络体感，文章开头会先从基础的 MLP 引入
 
@@ -53,7 +53,7 @@ tags:
 
 我们先尝试用一条直线拟合这些数据，模型写成 `y_pred = w * x + b`，w（权重）和 b（偏置）是可以调整的参数。根据数据不断调整它们，让预测结果更接近答案，这个过程就叫训练。
 
-上面这种用直线拟合数据、预测数值的做法，叫一线性回归。PyTorch 提供了一个现成的**线性层 `nn.Linear`**，帮我们保存权重、偏置并完成计算。这里用 `nn.Linear(1, 1)`，表示每个样本输入一个数、输出一个数，执行的就是 `w * x + b`。
+上面这种用直线拟合数据、预测数值的做法，叫线性回归。PyTorch 提供了一个现成的**线性层 `nn.Linear`**，帮我们保存权重、偏置并完成计算。这里用 `nn.Linear(1, 1)`，表示每个样本输入一个数、输出一个数，执行的就是 `w * x + b`。
 
 下面代码里的 Tensor（张量），可以先理解为 PyTorch 用来存放数字、进行计算的多维数组。`[[1.0], [2.0], [3.0]]` 是一个 3 行 1 列的 Tensor，形状（shape）是 `(3, 1)`：每行一个样本，每个样本只有一个输入值。
 
@@ -572,7 +572,7 @@ anguage models predich tokens from previous tokens. attention lets each token re
 
 ## 3. 拆解 Transformer
 
-这一节我会用我自己的 CS336 Assignment1 的实现来对照着逐一拆解 Transformer 的模块，我的实现在这里：https://github.com/fengye404/cs336-assignment。后面的代码全都片段全都出自这个仓库。
+这一节我会用我自己的 CS336 Assignment1 的实现来对照着逐一拆解 Transformer 的模块，我的实现在这里：https://github.com/fengye404/cs336-assignment。后面的代码片段全都出自这个仓库。
 
 > 如果你也想尝试一下 Assignment1，强烈建议停止阅读，去 clone 原始仓库：https://github.com/stanford-cs336/assignment1-basics，自己独立完成。如果你只是想了解一下 Transformer 的各个模块，那就让我们继续吧！
 
@@ -1306,7 +1306,7 @@ class MultiheadSelfAttention(torch.nn.Module):
 
 上一节的基础 Attention 根据 q、k 的匹配程度分配权重。因果遮罩限制了读取范围；我们还希望匹配分数能利用 token 之间相隔多远的信息。
 
-TinyGPT 的做法是把位置 Embedding 加到 token Embedding 上，再计算 q、k、v。这里改用 **RoPE（旋转位置编码，由）**，在 q、k 已经计算出来之后，根据各自的 token 位置旋转它们，再计算注意力分数。
+TinyGPT 的做法是把位置 Embedding 加到 token Embedding 上，再计算 q、k、v。这里改用 **RoPE（旋转位置编码）**，在 q、k 已经计算出来之后，根据各自的 token 位置旋转它们，再计算注意力分数。
 
 RoPE 的具体做法是：**把 q、k 的高维向量按分量两两配对，每一对当成一个二维向量，根据 token 的位置分别旋转，再按原顺序拼回去。** 比如 $(a,b,c,d)$ 拆成 $(a,b)$ 和 $(c,d)$，旋转后得到 $(a',b')$ 和 $(c',d')$，拼起来仍然是一个四维向量。
 
@@ -1318,8 +1318,14 @@ R(\theta)=
 \cos\theta & -\sin\theta \\
 \sin\theta & \cos\theta
 \end{pmatrix},\qquad
-\begin{pmatrix}a'\\b'\end{pmatrix}
-=R(\theta)\begin{pmatrix}a\\b\end{pmatrix}
+\begin{pmatrix}
+a' \\
+b'
+\end{pmatrix}
+=R(\theta)\begin{pmatrix}
+a \\
+b
+\end{pmatrix}
 $$
 
 它把二维向量逆时针旋转 $\theta$，长度保持不变。比如 $(1,0)$ 旋转 $90^\circ$，就变成 $(0,1)$。
@@ -1327,15 +1333,24 @@ $$
 回到刚才的四维例子，对 $(a,b)$ 和 $(c,d)$ 分别旋转，等价于让整个向量乘下面这个矩阵：
 
 $$
-\begin{pmatrix}a'\\b'\\c'\\d'\end{pmatrix}
-=
+\begin{pmatrix}
+a' \\
+b' \\
+c' \\
+d'
+\end{pmatrix} =
 \begin{pmatrix}
 \cos\alpha & -\sin\alpha & 0 & 0 \\
 \sin\alpha & \cos\alpha & 0 & 0 \\
 0 & 0 & \cos\beta & -\sin\beta \\
 0 & 0 & \sin\beta & \cos\beta
 \end{pmatrix}
-\begin{pmatrix}a\\b\\c\\d\end{pmatrix}
+\begin{pmatrix}
+a \\
+b \\
+c \\
+d
+\end{pmatrix}
 $$
 
 左上角只旋转 $(a,b)$，右下角只旋转 $(c,d)$，这种结构叫**分块对角矩阵**。每一对旋转后长度不变，所以整个向量的长度也不变；知道旋转角度后，反向旋转就能还原，信息没有被丢掉。
