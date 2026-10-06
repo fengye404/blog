@@ -244,9 +244,9 @@ if __name__ == "__main__":
 
 前面我们用 MLP，根据输入的 x 预测一个数。接下来换个任务：给模型一段文字，让它预测下一个字。比如输入「今天天气」，模型接着生成「很」，再把「今天天气很」作为输入，继续预测。这样反复进行，就能逐步生成一段文字。
 
-这里我们用一个极简的小 demo 来演示这个过程，下面是完整代码，已经写了详细的注释，可以自己本地跑一跑，如果有不懂的地方可以问问自己的 AI。
+这里我们用一个极简的小 demo——TinyGPT 来演示这个过程，下面是完整代码，已经写了详细的注释，可以自己本地跑一跑，如果有不懂的地方可以问问自己的 AI。
 
-> 这个小 demo 的目的是为了构建对于语言模型的体感，后续会逐章手撕其中的所有模块
+> 这个小 demo 的目的是为了构建对于语言模型的体感，后续会逐章拆解其中的所有模块
 
 ```python
 from __future__ import annotations
@@ -1116,7 +1116,7 @@ class SwiGLU(torch.nn.Module):
 
 > 如果觉得这块内容比较抽象，推荐看一下 3Blue1Brown 的视频，动画演示会清晰很多：https://www.bilibili.com/video/BV1TZ421j7Ke
 
-#### QKV
+#### Q、K、V
 
 在“这款新手机来自苹果”里，我们看到“手机”，就容易判断“苹果”指的是公司。我们希望模型也能利用这样的线索：处理“苹果”时，多关注能帮助理解它的词，把这些词的信息结合进来。
 
@@ -1306,7 +1306,7 @@ class MultiheadSelfAttention(torch.nn.Module):
 
 上一节的基础 Attention 根据 q、k 的匹配程度分配权重。因果遮罩限制了读取范围；我们还希望匹配分数能利用 token 之间相隔多远的信息。
 
-TinyGPT 的做法是把位置 Embedding 加到 token Embedding 上，再计算 q、k、v。这里改用 **RoPE（旋转位置编码）**，在 q、k 已经计算出来之后，根据各自的 token 位置旋转它们，再计算注意力分数。
+TinyGPT 的做法是把位置 Embedding 加到 token Embedding 上，再计算 q、k、v。这里改用 **RoPE（旋转位置编码，由）**，在 q、k 已经计算出来之后，根据各自的 token 位置旋转它们，再计算注意力分数。
 
 RoPE 的具体做法是：**把 q、k 的高维向量按分量两两配对，每一对当成一个二维向量，根据 token 的位置分别旋转，再按原顺序拼回去。** 比如 $(a,b,c,d)$ 拆成 $(a,b)$ 和 $(c,d)$，旋转后得到 $(a',b')$ 和 $(c',d')$，拼起来仍然是一个四维向量。
 
@@ -1358,11 +1358,7 @@ $\Theta$ 是控制旋转频率的基数。比如取 $d_k=4$、$\Theta=100$，向
 - **高频分量像秒针，对较近的位置变化更敏感。** 上面第一对每前进一个 token 就转 1 弧度，约 57°，相邻位置的方向差别已经很明显。但它转得快，绕过一圈后又会接近原来的方向，单看这一对，较远的位置也可能看起来很接近。
 - **低频分量像时针，在更长的位置范围内缓慢变化。** 第二对每前进一个 token 只转 0.1 弧度，约 5.7°，前进 10 个位置才转 1 弧度。它转一圈需要跨过更长的距离，能补充较远距离的位置线索；但如果只用很慢的频率，相邻位置的角度差又会太小。
 
-所以我们把快慢不同的“指针”放在一起：快的帮助区分附近的位置，慢的补充更长范围的变化。这些分量具体承载什么内容，由模型训练学到，并没有固定的“语法分量”或“语义分量”。
-
-**相对位置则体现在 q、k 的旋转角度差里。** 对同一对分量，q、k 使用相同频率。例如每个位置转 1 弧度，q 在位置 2、k 在位置 1，分别转 2 和 1 弧度，两次旋转相差 1 弧度。把它们一起后移到位置 5 和 4，旋转仍然相差 1 弧度。
-
-固定 q、k 的原始内容时，这相当于把两根箭头一起转了相同的角度，彼此的夹角和长度都不变，点积也就不变。如果改成位置 5 和 3，相隔距离变成 2，旋转角度差也变成 2 弧度，点积便会随之改变。下面的图展示了这三种情况：
+所以我们把快慢不同的“指针”放在一起：快的帮助区分附近的位置，慢的补充更长范围的变化。这些分量具体承载什么内容，由模型训练学到。
 
 ![RoPE · 从位置旋转到注意力权重](./rope-relative-angle-formula.png)
 
@@ -1374,23 +1370,9 @@ $$
 
 这里 $\omega$ 是这对分量的旋转频率。向量长度不变，**位置差 $j-i$ 通过角度差影响点积分数**。完整向量的点积，就是把各对分量的结果相加。
 
-**旋转保持 q、k 的模长和 shape 不变，v 不旋转。** 后续仍按原来的方式计算注意力权重，再对 v 加权求和。
+**旋转保持 q、k 的模长和 shape 不变，v 不旋转。** 后续仍按原来的方式计算注意力权重，再对 v 加权求和。相比把位置向量加到 token Embedding 上，RoPE 的优势是让匹配分数直接依赖相对距离。
 
-**相比把位置向量加到 token Embedding 上，RoPE 的优势是让匹配分数直接依赖相对距离。** 固定 q、k 的内容，把它们一起移到句子的其他位置，只要间距不变，分数就不变。同一种相对位置关系可以在不同位置复用，而位置向量相加没有这个保证。相比 TinyGPT 使用的可学习位置向量表，RoPE 还省去了这部分参数。
-
-`RotaryPositionalEmbedding` 在初始化时预先算好 cos、sin，前向计算时按位置查表。
-
-代码里的 `(-odd, even)`，就是把一对分量 `(a, b)` 变成 `(-b, a)`。代入最后的逐元素运算，得到的正好是二维旋转：
-
-$$
-(a',b')=(a\cos\theta-b\sin\theta,\ a\sin\theta+b\cos\theta)
-$$
-
-cos、sin 用 `register_buffer` 保存，它们随模型移动设备，但不参与梯度训练。RoPE 只应用到 q、k，v 保持原样。
-
-接入多头 Attention 时还要对齐形状。q、k 是 `(B, H, S, d_k)`，如果位置下标是 `(B, S)`，需要先补成 `(B, 1, S)`，让各个头共用位置。
-
-下面是完整的 RoPE 实现，注释中也展开了向量两两拆分、旋转和拼回的过程。
+下面是完整的 RoPE 以及集成了 RoPE 的多头注意力的实现：
 
 ```python
 import torch
@@ -1486,17 +1468,7 @@ class RotaryPositionalEmbedding(torch.nn.Module):
         rotated_x = x * cos_value + x_rotate_half * sin_value
         
         return rotated_x
-```
-
-参考：[Assignment 1，§3.4.3，公式 (8)、(9)，PDF 第 22–23 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
-
-#### 接入 Attention
-
-RoPE 接在拆分多头之后、计算注意力分数之前。它只旋转 q、k，保持它们的 `(B, H, S, d_k)` 形状不变；v、因果遮罩和后面的加权汇总沿用上一节的计算。
-
-下面是作业仓库里的完整 `MultiheadSelfAttention`，复用前面的 `Linear`、`scaled_dot_product_attention()` 和本节的 `RotaryPositionalEmbedding`。同时传入 `theta` 和 `max_seq_len` 时启用 RoPE，不传时就是上一节的基础计算。
-
-```python
+    
 class MultiheadSelfAttention(torch.nn.Module):
     def __init__(self, d_model: int, num_heads: int, theta=None, max_seq_len=None, device=None, dtype=None):
         super().__init__()
@@ -1595,8 +1567,6 @@ $$
 
 **和 LayerNorm 相比，RMSNorm 省去了减均值这一步。** LayerNorm 先减均值，再除以标准差；RMSNorm 直接除以均方根，计算步骤更少，也不要求归一化后的均值为 0。
 
-代码中的 `dim=-1` 表示只对最后一维计算，`keepdim=True` 保留这一维，方便广播。按照作业要求，先把输入转成 float32 再平方，最后转回原类型，降低低精度计算溢出的风险。
-
 下面是完整的 `RMSNorm` 实现。
 
 ```python
@@ -1645,11 +1615,9 @@ class RMSNorm(torch.nn.Module):
         return result.to(in_dtype)
 ```
 
-参考：[Assignment 1，§3.4.1，公式 (4)，PDF 第 19–20 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
-
 ### 7. 组装 Transformer
 
-前面的模块已经齐了，现在用 `TransformerBlock` 和 `TransformerLM` 把它们接起来。下面是这两个类的完整实现，可以和前面各模块的代码放在同一个 Python 文件里。
+前面的模块已经齐了，现在回过头来看 Architecture 中的那两张图，我们接下来只要按照架构去组装`TransformerBlock` 和 `TransformerLM` 就可以了：
 
 ```python
 import torch
@@ -1740,8 +1708,7 @@ class TransformerLM(torch.nn.Module):
         return x
 ```
 
-一个 Block 的计算可以写成：
-
+`TransformerBlock` 的  `forward()`：
 $$
 \begin{aligned}
 y &= x+\operatorname{MultiHeadSelfAttention}(\operatorname{RMSNorm}_1(x))\\
@@ -1749,10 +1716,9 @@ z &= y+\operatorname{SwiGLU}(\operatorname{RMSNorm}_2(y))
 \end{aligned}
 $$
 
-$x$ 是输入，$y$ 是中间结果，$z$ 是输出。**这里的 `+` 就是残差连接：把子层的计算结果加回输入，在原有表示上做更新。** 它也为梯度提供了一条直接传回前面各层的路径，让深层网络更容易训练。
+$x$ 是输入，$y$ 是中间结果，$z$ 是输出。这里的 `+` 就是**残差连接**，它把子层的计算结果加回输入，在原有表示上做更新。它也为梯度提供了一条直接传回前面各层的路径，让深层网络更容易训练。
 
-完整模型的计算为：
-
+`TransformerLM` 的  `forward()`：
 $$
 \begin{aligned}
 x^{(0)} &= \operatorname{Embedding}(\text{token IDs})\\
@@ -1765,7 +1731,7 @@ $L$ 是 Block 的数量，$x^{(\ell)}$ 是第 $\ell$ 个 Block 的输出。LM he
 
 #### 参数量和计算量
 
-最后用一道资源核算题，把前面各个模块的参数量和计算量串起来。
+最后来看一个 Assignment1 里的资源核算题，把前面各个模块的参数量和计算量串起来：
 
 > **Problem (`transformer_accounting`): Transformer LM resource accounting (5 points)**
 >
@@ -1862,9 +1828,7 @@ $L$ 是 Block 的数量，$x^{(\ell)}$ 是第 $\ell$ 个 Block 的输出。LM he
 
 ## 后记
 
-写到这里，Transformer 的各个模块就都实现了。再回头看前面的 TinyGPT，里面用到的 Embedding、Attention、前馈网络，我们现在也能自己写出来了。跟着课程做完这一部分，我对模型内部的计算过程也清楚了很多。
-
-现在我们只是搭好了模型的架子，距离实现一个完整的 LLM 还有一些工作要做，下一篇会继续写训练、推理相关的内容。
+写到这里，Transformer 的各个模块就都实现了。跟着课程做完这一部分，我们对模型的理解也会提高很多，不过现在我们只是搭好了模型的架子，距离实现一个完整的 LLM 还有一些工作要做，下一篇会继续写训练、推理相关的内容。
 
 ---
 
@@ -1872,7 +1836,6 @@ $L$ 是 Block 的数量，$x^{(\ell)}$ 是第 $\ell$ 个 Block 的输出。LM he
 
 - [CS336: Language Modeling from Scratch](https://cs336.stanford.edu/)
 - [Assignment 1: Basics](https://github.com/stanford-cs336/assignment1-basics/tree/main)
-- [cs336-study（lab 仓库）](https://github.com/fengye404/cs336-study)
 - [cs336-assignment（A1 实现）](https://github.com/fengye404/cs336-assignment)
 - Transformer 原论文：[Attention Is All You Need](https://arxiv.org/abs/1706.03762)
 - RoPE 原论文：[RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864)
