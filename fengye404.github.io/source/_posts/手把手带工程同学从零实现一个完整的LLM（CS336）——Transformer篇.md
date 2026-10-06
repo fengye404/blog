@@ -1302,15 +1302,13 @@ class MultiheadSelfAttention(torch.nn.Module):
         return self.out_proj(out)
 ```
 
-参考：[Assignment 1，§3.4.4、§3.4.5，公式 (10)–(14)，PDF 第 23–26 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
-
 ### 5. RoPE
 
 上一节的基础 Attention 根据 q、k 的匹配程度分配权重。因果遮罩限制了读取范围；我们还希望匹配分数能利用 token 之间相隔多远的信息。
 
 TinyGPT 的做法是把位置 Embedding 加到 token Embedding 上，再计算 q、k、v。这里改用 **RoPE（旋转位置编码）**，在 q、k 已经计算出来之后，根据各自的 token 位置旋转它们，再计算注意力分数。
 
-它把向量的分量两两配对，每一对当成二维向量，按 token 的位置旋转一个角度。作业给出的旋转矩阵如下：
+它把向量的分量两两配对，每一对当成二维向量，按 token 的位置旋转一个角度。先来复习一下二维旋转矩阵：
 
 ![RoPE 的二维旋转矩阵，Assignment 1 公式 (8)](./assignment1-rope-rotation.png)
 
