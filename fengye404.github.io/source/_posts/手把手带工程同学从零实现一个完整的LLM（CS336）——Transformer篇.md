@@ -493,6 +493,10 @@ x = x + self.mlp(self.ln2(x))
 
 这里的 MLP 对每个位置分别计算，位置之间的信息交流由 Attention 完成。
 
+这里的“位置”就是字符在序列里的下标。比如 `agent` 中，`a` 在位置 0，`g` 在位置 1，依次类推。TinyGPT 除了查字符的 Embedding，还会用这个下标查 `position_embedding`，把两个向量相加后送进 Transformer。同一个字符出现在不同位置时，就会得到不同的初始表示。
+
+位置 Embedding 提供“排在第几个”的信息；因果遮罩限制“能读取哪些字符”，让模型只能读取自己和前面的内容。两者在 TinyGPT 中一起使用。
+
 具体的 attention 机制会在后面详细介绍。
 
 ### 训练
@@ -1045,9 +1049,7 @@ $$
 
 ![SiLU 与 ReLU 对比，Assignment 1 Figure 3](./assignment1-silu-relu.png)
 
-SwiGLU 用到了三个不带偏置的 Linear，它们各自的权重矩阵记作 **W1、W2、W3**，都会随训练更新。数字只是用来区分这三组权重，计算按下面的分支结构进行。
-
-输入 `x` 同时经过两个 Linear。权重为 `W3` 的一层生成特征；权重为 `W1` 的一层，其输出再经过 SiLU，得到门控系数。两路结果逐元素相乘后，再经过权重为 `W2` 的 Linear 得到输出。图中的「Linear W3」就是指使用 `W3` 这组权重的线性层。
+SwiGLU 用到了三个不带偏置的 Linear，它们各自的权重矩阵记作 **W1、W2、W3**，都会随训练更新。输入 `x` 同时经过两个 Linear。权重为 `W3` 的一层生成特征；权重为 `W1` 的一层，其输出经过 SiLU 得到门控系数。两路结果逐元素相乘后，再经过权重为 `W2` 的 Linear 得到输出。
 
 ![SwiGLU · 门控分支](./swiglu-gating.png)
 
@@ -1096,11 +1098,11 @@ class SwiGLU(torch.nn.Module):
         return self.w2(a * b)
 ```
 
-参考：[Assignment 1，§3.4.2，Figure 3、公式 (5)、(7)，PDF 第 21–22 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
-
 ### 4. Attention
 
-前面说过，Attention 让每个位置读取上下文。具体怎么决定读哪些位置？先把输入向量经过三个 Linear，得到 **Q、K、V**。Q 用来和各个位置的 K 计算匹配分数，V 是最后要加权汇总的信息。
+前面的 Linear 和 SwiGLU 都分别处理每个 token 自己的向量。**Attention 让一个 token 汇集其他 token 的信息，得到包含上下文的新向量。** 这里说的“位置”，就是 token 在序列中的下标，比如一段文本的第 0、1、2 个 token。
+
+我们先实现基础的 Attention，下一节再加入 RoPE 位置编码。先看 token 之间怎样计算权重、汇总信息。输入向量经过三个 Linear，得到 **Q、K、V**。每个 token 的 Q 用来和允许读取的各个 token 的 K 计算匹配分数，V 是最后要加权汇总的信息。
 
 注意，Q、K、V 都是计算出来的中间结果；三个 Linear 里的权重才是训练时更新的参数。
 
@@ -1140,11 +1142,11 @@ $$
 
 在 `MultiheadSelfAttention.forward()` 中，先用三个 Linear 算出 q、k、v，再通过 `view` 和 `transpose` 拆成多个头。
 
-中间会对 q、k 应用 RoPE，下一节展开。之后创建下三角遮罩，计算 Attention，再把多个头的结果拼回去。
+然后创建下三角遮罩，计算 Attention，再把多个头的结果拼回去。
 
 例如 `D=64、H=4`，每个头就处理 16 个分量。拼回后仍是 `(B, S, 64)`，最后的 `out_proj` 再用一个 Linear 混合各个头的信息。
 
-下面把 `softmax()`、注意力计算和完整的 `MultiheadSelfAttention` 放在一起。这里复用前面实现的 `Linear`，其中用到的 `RotaryPositionalEmbedding` 会在下一节完整给出。
+下面把 `softmax()`、注意力计算和多头 Attention 放在一起，复用前面实现的 `Linear`。这份代码取自我们的作业实现，为了先看清基础计算，暂时去掉了 RoPE 的参数和分支；下一节会给出接入 RoPE 后的完整版本。
 
 ```python
 import torch
@@ -1200,7 +1202,7 @@ def scaled_dot_product_attention(
 
 
 class MultiheadSelfAttention(torch.nn.Module):
-    def __init__(self, d_model: int, num_heads: int, theta=None, max_seq_len=None, device=None, dtype=None):
+    def __init__(self, d_model: int, num_heads: int, device=None, dtype=None):
         super().__init__()
         
         # 要用 head 数量均分 d_model，所以需要校验能否整除
@@ -1218,13 +1220,7 @@ class MultiheadSelfAttention(torch.nn.Module):
         # 输出经过 QKV 运算后需要再过一次 Linear
         self.out_proj = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
         
-        # 如果传入了 theta 和 max_seq_len，则处理 rope 的逻辑
-        if theta is not None and max_seq_len is not None:
-            self.rope = RotaryPositionalEmbedding(theta=theta, d_k=self.head_dim, max_seq_len=max_seq_len, device=device)
-        else:
-            self.rope = None
-        
-    def forward(self, x: torch.Tensor, token_positions=None):
+    def forward(self, x: torch.Tensor):
         # 先计算出完整的 QKV，再按照 head 拆分
         q = self.W_Q(x)
         k = self.W_K(x)
@@ -1236,17 +1232,6 @@ class MultiheadSelfAttention(torch.nn.Module):
         q = q.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         v = v.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        
-        # 如果 rope 不为 null 就对 q、k 进行 rope 计算
-        if self.rope is not None:
-            # token_positions shape：(batch_size, seq_len)
-            if token_positions is None:
-                token_positions = torch.arange(seq_len, device=x.device).expand(batch_size, seq_len)
-            # 每条文本的位置沿 head 轴广播；一维位置可由所有文本共用。
-            if token_positions.ndim == 2:
-                token_positions = token_positions.unsqueeze(1)
-            q=self.rope(q, token_positions)
-            k=self.rope(k, token_positions)
         
         # 这里需要一个下三角矩阵
         """
@@ -1269,7 +1254,9 @@ class MultiheadSelfAttention(torch.nn.Module):
 
 ### 5. RoPE
 
-TinyGPT 用位置 Embedding 表示顺序。这里改用 **RoPE（旋转位置编码）**，直接把位置信息加到 Attention 的 q、k 中。
+上一节的基础 Attention 根据 q、k 的匹配程度分配权重。因果遮罩限制了读取范围；我们还希望匹配分数能利用 token 之间相隔多远的信息。
+
+TinyGPT 的做法是把位置 Embedding 加到 token Embedding 上，再计算 q、k、v。这里改用 **RoPE（旋转位置编码）**，在 q、k 已经计算出来之后，根据各自的 token 位置旋转它们，再计算注意力分数。
 
 它把向量的分量两两配对，每一对当成二维向量，按 token 的位置旋转一个角度。作业给出的旋转矩阵如下：
 
@@ -1398,6 +1385,79 @@ class RotaryPositionalEmbedding(torch.nn.Module):
 ```
 
 参考：[Assignment 1，§3.4.3，公式 (8)、(9)，PDF 第 22–23 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。旋转矩阵截图也来自这一节。
+
+#### 接入 Attention
+
+RoPE 接在拆分多头之后、计算注意力分数之前。它只旋转 q、k，保持它们的 `(B, H, S, d_k)` 形状不变；v、因果遮罩和后面的加权汇总沿用上一节的计算。
+
+下面是作业仓库里的完整 `MultiheadSelfAttention`，复用前面的 `Linear`、`scaled_dot_product_attention()` 和本节的 `RotaryPositionalEmbedding`。同时传入 `theta` 和 `max_seq_len` 时启用 RoPE，不传时就是上一节的基础计算。
+
+```python
+class MultiheadSelfAttention(torch.nn.Module):
+    def __init__(self, d_model: int, num_heads: int, theta=None, max_seq_len=None, device=None, dtype=None):
+        super().__init__()
+        
+        # 要用 head 数量均分 d_model，所以需要校验能否整除
+        assert d_model % num_heads == 0
+        
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        
+        # 先定义获取 QKV 向量的 Linear
+        self.W_Q = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.W_K = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.W_V = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        
+        # 输出经过 QKV 运算后需要再过一次 Linear
+        self.out_proj = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        
+        # 如果传入了 theta 和 max_seq_len，则处理 rope 的逻辑
+        if theta is not None and max_seq_len is not None:
+            self.rope = RotaryPositionalEmbedding(theta=theta, d_k=self.head_dim, max_seq_len=max_seq_len, device=device)
+        else:
+            self.rope = None
+        
+    def forward(self, x: torch.Tensor, token_positions=None):
+        # 先计算出完整的 QKV，再按照 head 拆分
+        q = self.W_Q(x)
+        k = self.W_K(x)
+        v = self.W_V(x)
+        
+        # 拆分后的多头 QKV 的 shape：(batch_size, num_heads, seq_len, head_dim)
+        # 这里 view 拆分需要先拆 qkv 的最后维度，所以前两维 shape 要展示保持 batch_size, seq_len，通过 transpose 处理成最终的 shape
+        batch_size, seq_len, d_model = x.shape
+        q = q.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        # 如果 rope 不为 null 就对 q、k 进行 rope 计算
+        if self.rope is not None:
+            # token_positions shape：(batch_size, seq_len)
+            if token_positions is None:
+                token_positions = torch.arange(seq_len, device=x.device).expand(batch_size, seq_len)
+            # 每条文本的位置沿 head 轴广播；一维位置可由所有文本共用。
+            if token_positions.ndim == 2:
+                token_positions = token_positions.unsqueeze(1)
+            q=self.rope(q, token_positions)
+            k=self.rope(k, token_positions)
+        
+        # 这里需要一个下三角矩阵
+        """
+        True  False False False
+        True  True  False False
+        True  True  True  False
+        True  True  True  True
+        """
+        mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool))
+        
+        # 计算注意力
+        out = scaled_dot_product_attention(Q=q,K=k,V=v,mask=mask)
+        
+        # 把 heads 维度拼回 d_model，恢复 (batch_size, seq_len, d_model)。
+        out = out.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        return self.out_proj(out)
+```
 
 ### 6. RMSNorm
 
