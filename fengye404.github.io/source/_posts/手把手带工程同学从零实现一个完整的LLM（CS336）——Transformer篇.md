@@ -1179,7 +1179,7 @@ $$
 
 下面用两个头展开“苹果”的计算，每个头的 q、k、v 都有 2 个分量。图中的数值用于演示；“苹果”位于句末，可以读取全部五个 token。
 
-![Attention · 多个头分别计算，再合起来](./attention-multihead-detail.png)
+![Attention · 多个头分别计算，再合起来](./attention-multihead-shapes-simple.png)
 
 
 把图里的过程写成公式，就是：
@@ -1208,8 +1208,6 @@ $$
 | 对 V 加权求和 | `(2, 4, 5, 16)` | 每个头得到自己的输出 |
 | 拼接各个头 | `(2, 5, 64)` | 每个 token 的 4 组结果拼在一起 |
 | 输出 Linear | `(2, 5, 64)` | 混合各个头提供的信息 |
-
-![Attention 的形状流转](./attention-shapes.svg)
 
 每段文本各自计算 Attention，batch 中不同文本之间不会互相读取。最后的 `out_proj` 沿用前面讲过的 Linear，对拼接后的向量进行变换。整个模块的输入、输出都是 `(B, S, D)`，但输出的每个 token 向量已经汇集了它能读取的上下文。
 
