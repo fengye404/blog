@@ -1310,7 +1310,17 @@ TinyGPT 的做法是把位置 Embedding 加到 token Embedding 上，再计算 q
 
 它把向量的分量两两配对，每一对当成二维向量，按 token 的位置旋转一个角度。先来复习一下二维旋转矩阵：
 
-![RoPE 的二维旋转矩阵，Assignment 1 公式 (8)](./assignment1-rope-rotation.png)
+$$
+R(\theta)=
+\begin{pmatrix}
+\cos\theta & -\sin\theta \\
+\sin\theta & \cos\theta
+\end{pmatrix},\qquad
+\begin{pmatrix}a'\\b'\end{pmatrix}
+=R(\theta)\begin{pmatrix}a\\b\end{pmatrix}
+$$
+
+它把二维向量逆时针旋转 $\theta$，长度保持不变。比如 $(1,0)$ 旋转 $90^\circ$，就变成 $(0,1)$。RoPE 用同样的方法旋转 q、k 中的每一对分量。
 
 其中，位置 `i` 的第 `k` 对分量使用的角度是：
 
@@ -1318,11 +1328,17 @@ $$
 \theta_{i,k}=\frac{i}{\Theta^{(2k-2)/d_k}},\qquad k=1,\ldots,d_k/2
 $$
 
-$\Theta$ 对应代码里的 `theta`，控制旋转频率。不同分量对使用不同频率，同一对分量的位置越靠后，旋转角度越大。
+$\Theta$ 是控制旋转频率的基数。比如取 $d_k=4$、$\Theta=100$，向量拆成两对后，第一对每前进一个位置旋转 1 弧度，第二对旋转 0.1 弧度。下面固定向量的内容，看看它放在不同位置时会怎样旋转：
 
-![RoPE 的旋转示意](./rope.svg)
+![RoPE · 两对分量以不同频率旋转](./rope-pair-rotation.gif)
 
-q 和 k 都旋转之后，它们点积中的位置影响取决于两个位置的相对距离。当然，点积还取决于 q、k 本身的内容。
+**为什么这样就能带入相对位置？** 对同一对分量，q、k 使用相同的旋转频率。假如它们都向后移动 3 个位置，就会一起多转相同的角度，彼此的夹角不变，点积也不变；如果只移动其中一个，夹角就会改变。
+
+下面只看一对二维分量，固定 q、k 的内容和长度，每个位置旋转 1 弧度。前两组都相隔 1 个位置，得到相同的点积；第三组改成相隔 2 个位置，点积随之改变。
+
+![RoPE · 相对位置与点积](./rope-relative-position.png)
+
+所以，旋转后点积中的位置影响取决于相对距离，同时仍保留 q、k 本身的内容信息。完整向量的各对分量分别完成这样的计算，再把点积相加。
 
 `RotaryPositionalEmbedding` 在初始化时预先算好 cos、sin，前向计算时按位置查表。
 
@@ -1434,7 +1450,7 @@ class RotaryPositionalEmbedding(torch.nn.Module):
         return rotated_x
 ```
 
-参考：[Assignment 1，§3.4.3，公式 (8)、(9)，PDF 第 22–23 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。旋转矩阵截图也来自这一节。
+参考：[Assignment 1，§3.4.3，公式 (8)、(9)，PDF 第 22–23 页](https://github.com/stanford-cs336/assignment1-basics/blob/main/cs336_assignment1_basics.pdf)。
 
 #### 接入 Attention
 
