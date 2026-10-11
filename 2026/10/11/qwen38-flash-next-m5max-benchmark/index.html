@@ -1,13 +1,13 @@
-<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告 | fengye's blog</title><meta name="author" content="风业"><meta name="copyright" content="风业"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="本文由 AI 参与创作。模型部署、测速和数据整理由 Codex 在我的机器上执行，测试时间为 2026 年 10 月 10 日至 11 日。  最近我想在 Mac Studio 上部署 Qwen3.8-Flash-Next，选了两个社区版本来对比：REAP-288 和 mixed-4-8bit。我平时会用到 200K 左右的上下文，所以除了短输入下能跑多快，还想看看输入变长之后，速度和内存占用会">
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告 | fengye's blog</title><meta name="author" content="风业"><meta name="copyright" content="风业"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="前段时间 Qwen 发布了 Qwen3.8-27B、Qwen3.8-flash-next 两个小模型，在 AA 的排行榜单上，甚至超过了了半年前的各家旗舰模型（比如 Opus 4.6、Kimi 2.6、GLM-5.2）  难道本地小模型真王朝了？！不过很遗憾我手上只有一台 4080s 的显卡，12G 显存只能勉强跑一跑 Qwen3.8-27B 的量化版，而且这种稠密模型的推理速度实在是感人。正巧">
 <meta property="og:type" content="article">
 <meta property="og:title" content="128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告">
 <meta property="og:url" content="https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/index.html">
 <meta property="og:site_name" content="fengye&#39;s blog">
-<meta property="og:description" content="本文由 AI 参与创作。模型部署、测速和数据整理由 Codex 在我的机器上执行，测试时间为 2026 年 10 月 10 日至 11 日。  最近我想在 Mac Studio 上部署 Qwen3.8-Flash-Next，选了两个社区版本来对比：REAP-288 和 mixed-4-8bit。我平时会用到 200K 左右的上下文，所以除了短输入下能跑多快，还想看看输入变长之后，速度和内存占用会">
+<meta property="og:description" content="前段时间 Qwen 发布了 Qwen3.8-27B、Qwen3.8-flash-next 两个小模型，在 AA 的排行榜单上，甚至超过了了半年前的各家旗舰模型（比如 Opus 4.6、Kimi 2.6、GLM-5.2）  难道本地小模型真王朝了？！不过很遗憾我手上只有一台 4080s 的显卡，12G 显存只能勉强跑一跑 Qwen3.8-27B 的量化版，而且这种稠密模型的推理速度实在是感人。正巧">
 <meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640">
 <meta property="article:published_time" content="2026-10-11T04:15:52.000Z">
-<meta property="article:modified_time" content="2026-10-11T08:32:14.481Z">
+<meta property="article:modified_time" content="2026-10-11T11:02:07.564Z">
 <meta property="article:author" content="风业">
 <meta property="article:tag" content="LLM">
 <meta property="article:tag" content="Qwen">
@@ -21,7 +21,7 @@
   "url": "https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/",
   "image": "https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640",
   "datePublished": "2026-10-11T04:15:52.000Z",
-  "dateModified": "2026-10-11T08:32:14.481Z",
+  "dateModified": "2026-10-11T11:02:07.564Z",
   "author": [
     {
       "@type": "Person",
@@ -170,54 +170,38 @@ btf.addGlobalFn('pjaxSend', () => {
   Pace.restart()
 }, 'pace_restart')
 
-</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js/themes/blue/pace-theme-minimal.min.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div class="bg-animation" id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">fengye's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  Back to Home</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> Search</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-10-11T04:15:52.000Z" title="Created 2026-10-11 12:15:52">2026-10-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-10-11T08:32:14.481Z" title="Updated 2026-10-11 16:32:14">2026-10-11</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">Word Count:</span><span class="word-count">3.1k</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post Views:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><div id="post-outdate-notice" data="{&quot;limitDay&quot;:720,&quot;messagePrev&quot;:&quot;It has been&quot;,&quot;messageNext&quot;:&quot;days since the last update, the content of the article may be outdated.&quot;,&quot;postUpdate&quot;:&quot;2026-10-11 16:32:14&quot;}" hidden></div><blockquote>
-<p>本文由 AI 参与创作。模型部署、测速和数据整理由 Codex 在我的机器上执行，测试时间为 2026 年 10 月 10 日至 11 日。</p>
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js/themes/blue/pace-theme-minimal.min.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div class="bg-animation" id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">fengye's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  Back to Home</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> Search</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-10-11T04:15:52.000Z" title="Created 2026-10-11 12:15:52">2026-10-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-10-11T11:02:07.564Z" title="Updated 2026-10-11 19:02:07">2026-10-11</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">Word Count:</span><span class="word-count">2.7k</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post Views:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><div id="post-outdate-notice" data="{&quot;limitDay&quot;:720,&quot;messagePrev&quot;:&quot;It has been&quot;,&quot;messageNext&quot;:&quot;days since the last update, the content of the article may be outdated.&quot;,&quot;postUpdate&quot;:&quot;2026-10-11 19:02:07&quot;}" hidden></div><p>前段时间 Qwen 发布了 Qwen3.8-27B、Qwen3.8-flash-next 两个小模型，在 AA 的排行榜单上，甚至超过了了半年前的各家旗舰模型（比如 Opus 4.6、Kimi 2.6、GLM-5.2）</p>
+<p><img src="/2026/10/11/qwen38-flash-next-m5max-benchmark/Artificial%20Analysis%20Intelligence%20Index%20(11%20Oct%20'26)-1708780.png" alt="Artificial Analysis Intelligence Index (11 Oct &#39;26)" loading='lazy'></p>
+<p>难道本地小模型真王朝了？！不过很遗憾我手上只有一台 4080s 的显卡，12G 显存只能勉强跑一跑 Qwen3.8-27B 的量化版，而且这种稠密模型的推理速度实在是感人。正巧 9 月苹果最新的 Mac Studio 要发布了，我必须得下一单尝尝咸淡（对不起买不起更贵的 M5 Ultra 了😭）</p>
+<p><img src="/2026/10/11/qwen38-flash-next-m5max-benchmark/29507d3f4de2f9c0cfb87bbc622dad4f.png" alt="29507d3f4de2f9c0cfb87bbc622dad4f" loading='lazy'></p>
+<p>昨天到货后，马上迫不及待跑了一下 Qwen3.8-Flash-Next。这次我测试的两个目标是：</p>
+<ol>
+<li>**<a target="_blank" rel="noopener" href="https://huggingface.co/sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit">Qwen3.8-Flash-Next-REAP-288-MLX-4bit</a>**：社区作者 sh0wie 提供的专家剪枝版本，每层保留 512 个专家中的 288 个，并使用 4-bit 量化。全套下载约 73.52 GB，主要优势是占用空间更小，下面简称 <strong>REAP</strong>。</li>
+<li>**<a target="_blank" rel="noopener" href="https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit">Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit</a>**：社区作者 ddalcu 提供的混合量化版本，保留全部 512 个专家，专家权重主要使用 4-bit，Attention 等部分使用 8-bit。全套下载约 107.33 GB，配合 mlx-serve 运行，下面简称 <strong>mixed</strong>。</li>
+</ol>
+<blockquote>
+<p>目前个人本地模型推理在成本上完全没有任何优势，如果不是为了学习研究，目前阶段不建议购买任何本地推理机器。</p>
+<p>为什么我不买 DGX Spark？因为我认为 Mac Studio 的功耗更低，日常使用更舒服，且保值率更高，而且目前 DGX Spark 虽然有 CUDA 生态的优势，的统一内存带宽只有 <strong>273</strong> <strong>GB&#x2F;s</strong>，在 decode 时是一个短板，只能说未来提升空间很大，可以期待一下 DGX Spark 2代。</p>
 </blockquote>
-<p>最近我想在 Mac Studio 上部署 Qwen3.8-Flash-Next，选了两个社区版本来对比：REAP-288 和 mixed-4-8bit。我平时会用到 200K 左右的上下文，所以除了短输入下能跑多快，还想看看输入变长之后，速度和内存占用会怎么变化，MTP 推测解码值不值得开。</p>
-<p>这次从 512 token 一直测到接近 256K，分别用了中文、英文和代码，共完成 240 个独立测试项。<strong>在这两套部署方案中，mixed 更适合我这台 128G Mac 的长上下文使用：200K 输入下生成速度约 56 tok&#x2F;s，开启 MTP 后约 75 tok&#x2F;s；REAP 占用的内存更少，但长输入下速度下降明显。</strong></p>
-<p>下面先介绍部署配置，再看速度、内存和输出检查，最后整理一下实际使用时怎么选。</p>
-<span id="more"></span>
-
-<h2 id="1-测试环境和模型版本"><a href="#1-测试环境和模型版本" class="headerlink" title="1. 测试环境和模型版本"></a>1. 测试环境和模型版本</h2><p>这次使用的是满血版 M5 Max Mac Studio：18 核 CPU、40 核 GPU、128 GiB 统一内存，系统为 macOS 27.0。</p>
-<p>两个模型都来自 Qwen3.8-Flash-Next，主要区别在于：</p>
-<ul>
-<li><strong>REAP-288</strong>：对专家做了剪枝，每层从 512 个保留到 288 个，再使用 4-bit 量化，模型文件更小。</li>
-<li><strong>mixed-4-8bit</strong>：保留 512 个专家，专家权重主要使用 4-bit，Attention 等部分使用 8-bit。下面简称 mixed。</li>
-</ul>
-<p>这里的专家可以理解为 MoE 模型里供路由选择的一组子网络。两版处理每个 token 时都激活 10 个专家，所以专家总数减少，并不代表每次计算也按同样比例减少。</p>
+<h2 id="1-模型部署"><a href="#1-模型部署" class="headerlink" title="1. 模型部署"></a>1. 模型部署</h2><p>机器配置前面已经贴过了：18 核 CPU、40 核 GPU、128G 统一内存，系统是 macOS 27.0。两个模型对应的推理引擎如下：</p>
 <table>
 <thead>
 <tr>
-<th>项目</th>
-<th>REAP</th>
-<th>mixed</th>
+<th>模型</th>
+<th>推理引擎</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>模型仓库</td>
-<td><a target="_blank" rel="noopener" href="https://huggingface.co/sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit">sh0wie &#x2F; REAP-288-MLX-4bit</a></td>
-<td><a target="_blank" rel="noopener" href="https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit">ddalcu &#x2F; MLX-Serve-mixed-4-8bit</a></td>
+<td>REAP</td>
+<td>mlx-vlm 0.7.6 &#x2F; MLX 0.32.3</td>
 </tr>
 <tr>
-<td>推理引擎</td>
-<td>mlx-vlm 0.7.6 &#x2F; MLX 0.32.3</td>
+<td>mixed</td>
 <td>mlx-serve 26.10.1</td>
 </tr>
-<tr>
-<td>全套下载体积</td>
-<td>73.52 GB，约 68.47 GiB</td>
-<td>107.33 GB，包含约 32 GB 的 ngram 表</td>
-</tr>
-<tr>
-<td>MTP 权重</td>
-<td>另需约 5.24 GB 的 drafter</td>
-<td>模型包内提供</td>
-</tr>
 </tbody></table>
-<p>为了让结果能对上具体版本，下载时固定了 revision，并对权重做了 SHA-256 校验。完整版本号放在文末的测试配置中。两边使用了不同的权重和引擎，下面的结果反映的是整套部署方案的差异。</p>
-<p><strong>版本更新说明：</strong>整理文章时，<a target="_blank" rel="noopener" href="https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit#qwen38-flash-next-for-mlx-serve-4-bit-experts-8-bit-rest">mixed 模型作者已推荐新的 iQ 版本</a>，旧包停止更新。本文仍保留实际测过的 mixed-4-8bit，新版本没有在本机复测。</p>
-<h2 id="2-部署时怎么控制内存"><a href="#2-部署时怎么控制内存" class="headerlink" title="2. 部署时怎么控制内存"></a>2. 部署时怎么控制内存</h2><p>Qwen3.8-Flash-Next 还有一张较大的 <strong>ngram embedding 表</strong>，根据相邻 token 的组合查出向量。mixed 模型包中，这张表单独放在 <code>ngram_table.bin</code>，约占 32 GB。</p>
-<p>这次两套方案都将表留在 SSD 上，通过 <strong>mmap（内存映射）按需读取</strong>：访问到哪部分，就读取对应的文件页，交给系统缓存管理。这样可以减少整表常驻内存的占用。具体设置如下：</p>
+<h3 id="Ngram-表与内存映射"><a href="#Ngram-表与内存映射" class="headerlink" title="Ngram 表与内存映射"></a>Ngram 表与内存映射</h3><p>下载模型时会发现，里面还有一张很大的 <strong>ngram embedding 表</strong>。它根据相邻 token 的组合查出向量，mixed 版本将它单独放在 <code>ngram_table.bin</code> 中，光这一个文件就有约 32 GB。</p>
+<p>如果把整张表都加载进内存，会挤掉不少留给上下文和其他应用的空间。这次两个模型都用了 <strong>mmap（内存映射）</strong>：文件放在 SSD 上，用到哪部分就读取哪部分，读过的文件页由 macOS 缓存。这样就不用让整张表始终常驻内存。</p>
 <table>
 <thead>
 <tr>
@@ -227,12 +211,12 @@ btf.addGlobalFn('pjaxSend', () => {
 </tr>
 </thead>
 <tbody><tr>
-<td>ngram 表</td>
+<td>ngram 加载方式</td>
 <td><code>ple_storage</code>，SSD mmap</td>
 <td><code>ngram_table.bin</code>，SSD mmap</td>
 </tr>
 <tr>
-<td>额外设置</td>
+<td>相关设置</td>
 <td><code>cache_rows=0</code></td>
 <td>关闭 <code>ple-gpu</code>，设置 <code>MLX_SERVE_NGRAM_WARM=0</code></td>
 </tr>
@@ -241,14 +225,15 @@ btf.addGlobalFn('pjaxSend', () => {
 <td>4 GiB</td>
 <td>8 GiB</td>
 </tr>
-<tr>
-<td>Prefill 分块大小</td>
-<td>1,024</td>
-<td>1,024</td>
-</tr>
 </tbody></table>
-<p><code>MLX_SERVE_NGRAM_WARM=0</code> 用来关闭整张表的主动后台预热。已经访问过的文件页仍会进入 macOS 缓存，因此 mmap 不等于完全不占内存，也不能把重启模型进程当作清空了 SSD 文件缓存。</p>
-<p>测速时，活动监视器里 REAP 的 Python 进程大约占 49 GB，比下载体积小。原因就在于<strong>磁盘文件大小、进程内存、MLX 分配量和系统文件缓存是不同的统计口径</strong>。下面统一列 MLX 在全部速度测试中记录到的最高分配量：</p>
+<p><code>MLX_SERVE_NGRAM_WARM=0</code> 是关闭整表后台预热，避免主动把整张表读进系统缓存。mmap 仍然会占用一部分内存，只是文件页可以由系统按需回收。</p>
+<h3 id="MTP-推测解码"><a href="#MTP-推测解码" class="headerlink" title="MTP 推测解码"></a>MTP 推测解码</h3><p>这次还分别测了开启和关闭 <strong>MTP（Multi-Token Prediction，多 token 预测）</strong>的情况。它在这里用于推测解码：先由预测模块提出后面几个 token，再交给主模型验证。如果一次能接收多个 token，就有机会比逐个生成更快。</p>
+<p>不过，预测和验证也有开销，所以开了不一定更快。REAP 还需要额外加载约 5.24 GB 的预测模型（drafter），mixed 的模型包里已经带了对应权重。后面我们直接看两种模式的速度差别。</p>
+<blockquote>
+<p>整理文章时，mixed 作者已经<a target="_blank" rel="noopener" href="https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit#qwen38-flash-next-for-mlx-serve-4-bit-experts-8-bit-rest">推荐新的 iQ 版本</a>，旧包停止更新。下面的数据对应这次实际测过的 mixed-4-8bit，新版还没有在本机复测。</p>
+</blockquote>
+<h2 id="2-内存占用"><a href="#2-内存占用" class="headerlink" title="2. 内存占用"></a>2. 内存占用</h2><p>先看内存。测速时活动监视器里 REAP 的 Python 进程大约占 49 GB，比下载下来的文件小不少。前面说的 ngram 按需加载就是原因之一，所以不能直接用模型文件大小来判断运行时占用。</p>
+<p>下面是整个测速过程中，<strong>MLX 记录到的最高内存分配量</strong>：</p>
 <table>
 <thead>
 <tr>
@@ -273,41 +258,16 @@ btf.addGlobalFn('pjaxSend', () => {
 <td align="right">84.30 GB</td>
 </tr>
 </tbody></table>
-<p>在本次单模型、单请求测试中，两套方案都能在 128 GiB 内存上跑完；REAP 的余量更大。这里的数值不代表整机总占用，也不能直接与活动监视器的进程内存相加。REAP 按请求记录峰值，mixed 按服务进程记录高水位，并在每个上下文批次重启。</p>
-<p>正式请求期间采样到的 Swapouts 增量均为零，也就是没有观察到新增的换出记录。日常还要同时运行哪些应用，仍然需要算进内存预算。</p>
-<h2 id="3-从-512-到-256K，速度变化有多大"><a href="#3-从-512-到-256K，速度变化有多大" class="headerlink" title="3. 从 512 到 256K，速度变化有多大"></a>3. 从 512 到 256K，速度变化有多大</h2><h3 id="测试方法"><a href="#测试方法" class="headerlink" title="测试方法"></a>测试方法</h3><p>输入长度分为八档：512、4,096、16,384、32,768、65,536、131,072、200,000 和 261,632 token。最后一档给 262,144 token 的上下文窗口留出了输出空间，下面简称 <strong>256K 档</strong>。</p>
-<p>中文、英文使用固定的 Wikipedia 文本，代码使用 CPython 3.12.0 标准库源码，按长度截取，没有反复复制短文来凑 token。每份输入的前、中、后各插入一个校验码，让模型先提取，再分析内容。</p>
-<p>REAP、mixed 分别测试普通模式和 MTP 模式。32K 及以下每项重复三次，64K 及以上重复两次，合计 240 项。其他设置保持一致：</p>
-<ul>
-<li>每次只加载一个模型，处理一个请求。</li>
-<li>输出最多 256 token，<code>temperature=0</code>，关闭思考。</li>
-<li>关闭前缀缓存，让每轮重新处理完整输入。</li>
-<li><code>prefill chunk=1024</code>，每批处理 1,024 个输入 token。</li>
-</ul>
-<p>读速度表之前，先区分三个指标：</p>
-<table>
-<thead>
-<tr>
-<th>指标</th>
-<th>表示什么</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Prefill 速度</td>
-<td>模型每秒处理多少输入 token</td>
-</tr>
-<tr>
-<td>Decode 速度</td>
-<td>模型每秒生成多少输出 token</td>
-</tr>
-<tr>
-<td>首 token 时间</td>
-<td>从发送请求到收到第一个输出 token 要等多久，包含分词等开销</td>
-</tr>
-</tbody></table>
-<p><strong>长文输入首先要等 Prefill 完成，之后才进入持续生成。</strong>所以生成速度快，并不代表把一份长文发过去就能立刻收到回答。</p>
-<h3 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h3><p><img src="/downloads/qwen38-m5max-benchmark/speed-curves.png" alt="中文、英文和代码在不同输入长度下的 Prefill 与 Decode 速度" loading='lazy'></p>
-<p>图中实线为普通模式，虚线为 MTP，误差棒表示实际最小值到最大值。完整报告按中文、英文和代码分别统计；下面将同一档三个领域的全部轮次合并，取中位数。</p>
+<p>这轮始终只加载一个大模型、处理一个请求，两套方案都能跑完接近 256K 的输入。mixed 普通模式最高约 81 GB，开 MTP 后约 84 GB；REAP 则分别约 55 GB 和 61 GB，能给其他应用多留一些空间。</p>
+<p>这些数值不包含整机所有占用，也不能和活动监视器里的进程内存直接相加。测试期间没有采样到新增的 Swapouts（内存换出）记录；如果还要同时开其他模型或应用，就要另外留出余量。</p>
+<h2 id="3-推理性能"><a href="#3-推理性能" class="headerlink" title="3. 推理性能"></a>3. 推理性能</h2><p>我平时会用到 200K 左右的上下文，所以这次没有只测几百个 token，而是从 512 一直测到了接近 256K，看看输入变长后会掉多少速度。</p>
+<h3 id="测试方法"><a href="#测试方法" class="headerlink" title="测试方法"></a>测试方法</h3><p>输入分为八档：512、4,096、16,384、32,768、65,536、131,072、200,000 和 261,632 token。最后一档给 262,144 token 的窗口留了一部分输出空间，下面简称 <strong>256K 档</strong>。</p>
+<p>中文、英文取固定的 Wikipedia 文本，代码取 CPython 3.12.0 标准库源码，按需要的长度截取。每份输入前、中、后各放一个校验码，让模型先找出来，再分析内容，顺便检查长输入里的信息能不能被读到。</p>
+<p>两个模型各测普通模式和 MTP 模式，32K 及以下重复三次，64K 及以上重复两次，共 240 个独立测试项。每次最多输出 256 token，<code>temperature=0</code>，关闭思考和前缀缓存；输入按每批 1,024 token 处理，也就是 <code>prefill chunk=1024</code>。</p>
+<p>这里先区分一下 <strong>Prefill 和 Decode</strong>：把一大段内容发给模型后，模型要先处理这些输入，这一步叫 Prefill；随后开始往外生成回答，叫 Decode。表里的 tok&#x2F;s 就是每秒处理或生成的 token 数。</p>
+<p>所以看长上下文性能，要同时看<strong>多久开始回答，以及开始后输出多快</strong>。只看 Decode，很容易忽略前面处理长文的等待时间。</p>
+<h3 id="测试结果"><a href="#测试结果" class="headerlink" title="测试结果"></a>测试结果</h3><p><img src="/2026/10/11/qwen38-flash-next-m5max-benchmark/speed-curves.png" alt="中文、英文和代码在不同输入长度下的 Prefill 与 Decode 速度" loading='lazy'></p>
+<p>图中实线是普通模式，虚线是 MTP，误差棒表示各轮的最小值到最大值。下面列出全部八档结果，数值取同一档中文、英文、代码全部轮次的中位数。首 token 时间从发出请求开始计算，也包含分词等开销。</p>
 <table>
 <thead>
 <tr>
@@ -319,6 +279,174 @@ btf.addGlobalFn('pjaxSend', () => {
 </tr>
 </thead>
 <tbody><tr>
+<td>512</td>
+<td>REAP</td>
+<td align="right">1,141.3</td>
+<td align="right">43.5</td>
+<td align="right">0.5</td>
+</tr>
+<tr>
+<td>512</td>
+<td>REAP + MTP</td>
+<td align="right">1,177.3</td>
+<td align="right">42.9</td>
+<td align="right">0.4</td>
+</tr>
+<tr>
+<td>512</td>
+<td>mixed</td>
+<td align="right">1,580.5</td>
+<td align="right">66.8</td>
+<td align="right">0.3</td>
+</tr>
+<tr>
+<td>512</td>
+<td>mixed + MTP</td>
+<td align="right">1,557.5</td>
+<td align="right">94.3</td>
+<td align="right">0.3</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>REAP</td>
+<td align="right">1,285.6</td>
+<td align="right">39.3</td>
+<td align="right">3.2</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>REAP + MTP</td>
+<td align="right">1,308.5</td>
+<td align="right">46.1</td>
+<td align="right">3.1</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>mixed</td>
+<td align="right">2,183.5</td>
+<td align="right">62.4</td>
+<td align="right">1.9</td>
+</tr>
+<tr>
+<td>4K</td>
+<td>mixed + MTP</td>
+<td align="right">2,175.9</td>
+<td align="right">95.2</td>
+<td align="right">1.9</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>REAP</td>
+<td align="right">1,262.7</td>
+<td align="right">38.1</td>
+<td align="right">13.0</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>REAP + MTP</td>
+<td align="right">1,268.2</td>
+<td align="right">43.1</td>
+<td align="right">12.9</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>mixed</td>
+<td align="right">2,144.0</td>
+<td align="right">61.3</td>
+<td align="right">7.6</td>
+</tr>
+<tr>
+<td>16K</td>
+<td>mixed + MTP</td>
+<td align="right">2,147.3</td>
+<td align="right">91.1</td>
+<td align="right">7.6</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>REAP</td>
+<td align="right">1,241.2</td>
+<td align="right">35.5</td>
+<td align="right">26.4</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>REAP + MTP</td>
+<td align="right">1,221.9</td>
+<td align="right">41.5</td>
+<td align="right">26.9</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>mixed</td>
+<td align="right">2,131.0</td>
+<td align="right">61.3</td>
+<td align="right">15.4</td>
+</tr>
+<tr>
+<td>32K</td>
+<td>mixed + MTP</td>
+<td align="right">2,045.1</td>
+<td align="right">83.8</td>
+<td align="right">16.0</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>REAP</td>
+<td align="right">1,096.9</td>
+<td align="right">31.0</td>
+<td align="right">60.3</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>REAP + MTP</td>
+<td align="right">1,091.2</td>
+<td align="right">30.7</td>
+<td align="right">60.6</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>mixed</td>
+<td align="right">1,827.6</td>
+<td align="right">59.8</td>
+<td align="right">36.6</td>
+</tr>
+<tr>
+<td>64K</td>
+<td>mixed + MTP</td>
+<td align="right">2,060.7</td>
+<td align="right">92.7</td>
+<td align="right">31.8</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>REAP</td>
+<td align="right">1,086.9</td>
+<td align="right">25.1</td>
+<td align="right">120.8</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>REAP + MTP</td>
+<td align="right">1,083.8</td>
+<td align="right">24.4</td>
+<td align="right">121.2</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>mixed</td>
+<td align="right">1,922.8</td>
+<td align="right">58.4</td>
+<td align="right">68.5</td>
+</tr>
+<tr>
+<td>128K</td>
+<td>mixed + MTP</td>
+<td align="right">1,969.2</td>
+<td align="right">79.0</td>
+<td align="right">66.6</td>
+</tr>
+<tr>
 <td>200K</td>
 <td>REAP</td>
 <td align="right">1,047.5</td>
@@ -375,75 +503,144 @@ btf.addGlobalFn('pjaxSend', () => {
 <td align="right">143.9</td>
 </tr>
 </tbody></table>
-<p>普通模式下，mixed 在 200K 和 256K 仍能保持约 56 tok&#x2F;s 的生成速度，REAP 则下降到约 21 和 18 tok&#x2F;s。处理长输入时，mixed 的 Prefill 也更快，因此对我常用的 200K 上下文来说，mixed 更合适。</p>
-<p>不过 mixed 在 256K 档也要等约 141 秒才开始输出。这里关闭了前缀缓存，每次都要重新处理输入；多轮对话复用历史缓存后的等待时间，本轮没有测试。</p>
-<h3 id="MTP-要不要开"><a href="#MTP-要不要开" class="headerlink" title="MTP 要不要开"></a>MTP 要不要开</h3><p>MTP（Multi-Token Prediction，多 token 预测）在这里用于推测解码：先由预测模块提出后续 token，再由主模型验证，希望一次验证能接收多个 token，减少逐个生成的开销。预测和验证本身也要计算，实际能否提速，需要测一下。</p>
-<p>mixed 在 200K 档从 56.3 提升到 74.8 tok&#x2F;s，提升约 <code>(74.8 / 56.3 - 1) × 100% ≈ 33%</code>；256K 档也有类似收益。但首 token 时间变化不大，MTP 在这里主要加快的是开始输出之后的生成过程。</p>
-<p>REAP 在这两个长输入档位都变慢了，还多占约 5 GB 的 MLX 内存。因此，<strong>mixed 可以按需开启 MTP，REAP 用于长上下文时保持普通模式即可。</strong></p>
-<p>另外，对相同输入的首轮完整输出做比较，REAP 两种模式有 24&#x2F;24 份逐字一致，mixed 只有 3&#x2F;24 份一致。这个结果只说明当前运行时的输出会变化；如果要复现普通模式的输出，就继续使用普通模式。</p>
-<h2 id="4-输出质量检查"><a href="#4-输出质量检查" class="headerlink" title="4. 输出质量检查"></a>4. 输出质量检查</h2><p>速度之外，我们也要看看模型有没有正常回答。这次做了两类简单检查：</p>
-<table>
+<p><strong>长上下文下，mixed 的优势比较明显。</strong>普通模式在 200K 和 256K 两档都能保持约 56 tok&#x2F;s，REAP 则降到了约 21 和 18 tok&#x2F;s。mixed 处理输入也更快：200K 输入约等 108 秒开始回答，REAP 约等 191 秒。</p>
+<p>不过，256K 输入即使用 mixed，也要等约 141 秒才开始输出。这次关掉了前缀缓存，每次都得重新处理整段输入；日常多轮对话如果能复用历史缓存，等待时间需要另外测，不能直接套这张表。</p>
+<h3 id="MTP-性能对比"><a href="#MTP-性能对比" class="headerlink" title="MTP 性能对比"></a>MTP 性能对比</h3><p>mixed 在 200K 档从 56.3 提升到 74.8 tok&#x2F;s，约快了 33%，256K 档也差不多。但首 token 时间基本没变，也就是说，它主要加快的是<strong>开始回答之后的输出速度</strong>。</p>
+<p>REAP 的结果正好相反：两个长输入档位都变慢了，还多占了约 5 GB 内存。<strong>按这轮结果，mixed 可以开 MTP 试试，REAP 跑长上下文时就保持普通模式。</strong></p>
+<p>我还对比了相同输入下的首轮完整回答。REAP 开关 MTP 的 24 份回答全部逐字一致，mixed 只有 3 份一致。输出不同不等于质量下降，不过如果需要复现普通模式的回答，就不要在两种模式之间切换。</p>
+<h2 id="附：测试配置"><a href="#附：测试配置" class="headerlink" title="附：测试配置"></a>附：测试配置</h2><h3 id="硬件环境"><a href="#硬件环境" class="headerlink" title="硬件环境"></a>硬件环境</h3><table>
 <thead>
 <tr>
-<th>检查项</th>
-<th align="right">REAP</th>
-<th align="right">mixed</th>
+<th>项目</th>
+<th>配置</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>六个简单任务：算术、JSON、排序、逻辑、提取、格式遵循</td>
-<td align="right">两种模式均通过 5&#x2F;6</td>
-<td align="right">两种模式均通过 5&#x2F;6</td>
+<td>机器</td>
+<td>Mac Studio，Apple M5 Max</td>
 </tr>
 <tr>
-<td>输入前、中、后三个校验码的提取</td>
-<td align="right">两种模式均命中 177&#x2F;180</td>
-<td align="right">两种模式均命中 180&#x2F;180</td>
+<td>CPU &#x2F; GPU</td>
+<td>18 核 &#x2F; 40 核</td>
+</tr>
+<tr>
+<td>统一内存</td>
+<td>128 GiB</td>
+</tr>
+<tr>
+<td>系统</td>
+<td>macOS 27.0</td>
 </tr>
 </tbody></table>
-<p>四种方案都答错了同一个算术样本。REAP 的三次校验码错误来自同一份 4K 英文输入，200K 和 256K 档则全部提取成功。它们说明模型在这些输入下能完成简单任务，复杂长文理解和实际代码修改能力还需要另外测试。本轮没有跑 HumanEval。</p>
-<p>还做了一次固定文本预测检查：让模型预测中文、英文和代码里的下一个 token，看看它给正确答案分配了多少概率。用 <strong>NLL（负对数似然）</strong>表示，正确 token 的概率越高，NLL 越低。</p>
-<p>受接口最多返回 top-1024 token 概率的限制，96 个采样位置中只有 95 个能同时给两个模型评分：REAP 的平均 NLL 为 2.1034，mixed 为 1.7881。mixed 在这个小样本上更好。由于缺失位置被排除，这个结果会偏向容易预测的 token，不能当作完整语料的困惑度评测。</p>
-<h2 id="5-复测时需要注意的地方"><a href="#5-复测时需要注意的地方" class="headerlink" title="5. 复测时需要注意的地方"></a>5. 复测时需要注意的地方</h2><p>这轮测试有两个问题会影响结果核对，单独记录一下。</p>
-<p><strong>第一个是 token 数要以实际引擎为准。</strong>两模型的 tokenizer 文件相同，但原生引擎与 Hugging Face 实现的分词结果存在差异。例如同一份中文长输入，一边统计为 200,020 token，另一边是 200,002。后来通过 <code>/tokenize</code> 核对，序列都能还原原文，usage 与原生计数一致，输入加输出预算也没有超出窗口，最终按实际引擎计数计算速度。两套方案收到的是相同文本，token 序列不一定完全相同。</p>
-<p><strong>第二个是加载失败和缓存状态要留下记录。</strong>mixed 在权重预计算阶段出现过六次 GPU 超时，电脑中途也重启过一次，恢复后补跑了缺失批次。264 条原始速度记录里有 24 条重跑，最终每个测试项只采用第一条通过核查的结果，得到 240 项。加载超时的原因尚未确认。</p>
-<p>macOS 文件缓存没有强制清空，首轮编译和读页的耗时保留在结果里；测试也跨过重启，两个请求期间执行过短暂的 CPU 分词核查。完整报告保留了波动范围，复测时可以一起对照。</p>
-<h2 id="6-实际使用时怎么选"><a href="#6-实际使用时怎么选" class="headerlink" title="6. 实际使用时怎么选"></a>6. 实际使用时怎么选</h2><p>如果同样使用 128G M5 Max，可以先按自己的需求选：</p>
-<table>
+<h3 id="引擎配置"><a href="#引擎配置" class="headerlink" title="引擎配置"></a>引擎配置</h3><table>
 <thead>
 <tr>
-<th>使用需求</th>
-<th>本轮测试后的选择</th>
+<th>项目</th>
+<th>REAP</th>
+<th>mixed</th>
 </tr>
 </thead>
 <tbody><tr>
-<td>常用 200K 左右的长上下文</td>
-<td>这两套方案中优先 mixed，普通模式约 56 tok&#x2F;s</td>
+<td>模型</td>
+<td>sh0wie&#x2F;Qwen3.8-Flash-Next-REAP-288-MLX-4bit</td>
+<td>ddalcu&#x2F;Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit</td>
 </tr>
 <tr>
-<td>希望长输入后生成得更快</td>
-<td>mixed 开启 MTP，约 75 tok&#x2F;s，同时检查自己的任务输出</td>
+<td>固定版本</td>
+<td><a target="_blank" rel="noopener" href="https://huggingface.co/sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit/tree/668f31bcc56bf9400e64c9463445eee47597c2d9">668f31b</a></td>
+<td><a target="_blank" rel="noopener" href="https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit/tree/31919167b2e4549167cd4729b782f3155e75b686">3191916</a></td>
 </tr>
 <tr>
-<td>希望给其他应用多留内存</td>
-<td>REAP 普通模式，MLX 峰值约 55 GB</td>
+<td>引擎版本</td>
+<td>mlx-vlm 0.7.6 &#x2F; MLX 0.32.3</td>
+<td>mlx-serve 26.10.1</td>
 </tr>
 <tr>
-<td>需要复现普通模式的回答</td>
-<td>保持普通模式，不切换 MTP</td>
+<td>Ngram 加载</td>
+<td>SSD mmap，<code>ple_storage</code></td>
+<td>SSD mmap，<code>ngram_table.bin</code></td>
+</tr>
+<tr>
+<td>Ngram 设置</td>
+<td><code>cache_rows=0</code></td>
+<td>关闭 <code>ple-gpu</code>，<code>MLX_SERVE_NGRAM_WARM=0</code></td>
+</tr>
+<tr>
+<td>MLX 缓存上限</td>
+<td>4 GiB</td>
+<td>8 GiB</td>
+</tr>
+<tr>
+<td>MTP</td>
+<td>关闭、开启各测一轮完整档位</td>
+<td>关闭、开启各测一轮完整档位</td>
 </tr>
 </tbody></table>
-<p>配置上，<strong>先沿用 SSD mmap 加载 ngram 表、关闭整表主动预热、Prefill 分块设为 1,024 这组已经测过的设置</strong>，再根据自己的任务调整。测试中关闭前缀缓存，是为了比较完整输入的处理成本；日常多轮对话是否启用、启用后能省多少时间，需要单独验证。</p>
-<p>这次主要测清楚了长输入下的速度和内存占用，输出预算只有 256 token，还没有覆盖长回答、并发请求和复杂问答。后续继续测这些场景，再更新实际使用的配置。</p>
-<h2 id="测试数据与参考资料"><a href="#测试数据与参考资料" class="headerlink" title="测试数据与参考资料"></a>测试数据与参考资料</h2><ul>
-<li><a href="/downloads/qwen38-m5max-benchmark/report.html">完整评测报告：分领域速度、波动范围和测量口径</a></li>
-<li><a href="/downloads/qwen38-m5max-benchmark/summary.json">结构化统计数据</a></li>
-<li><a href="/downloads/qwen38-m5max-benchmark/benchmark-plan.json">测试配置与固定模型版本</a></li>
-<li><a href="/downloads/qwen38-m5max-benchmark/tokenizer-audit.json">分词核查记录</a></li>
-<li><a target="_blank" rel="noopener" href="https://huggingface.co/sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit">REAP 模型说明</a></li>
-<li><a target="_blank" rel="noopener" href="https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit">mixed 模型说明</a></li>
-</ul>
-</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="https://fengye404.top">风业</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/">https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles on this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless otherwise stated.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Qwen/">Qwen</a><a class="post-meta__tags" href="/tags/MLX/">MLX</a><a class="post-meta__tags" href="/tags/%E6%9C%AC%E5%9C%B0%E9%83%A8%E7%BD%B2/">本地部署</a></div><div class="post-share"><div class="social-share" data-image="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" data-sites="x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">Next</div><div class="info-item-2">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</div></div><div class="info-2"><div class="info-item-1">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇 本文除图片以外，90% 内容为古法手搓，仅用 AI 润色  前言最近我在学习 CS336「Language Modeling from Scratch」，是斯坦福大学的大语言模型构建课程。这门课程在各种社交媒体（X）中都很火爆，但是在内网似乎没有多少人分享过，所以我想写一系列文章来分享一下我的学习过程。 虽然课程名字中叫「from Scratch」，但是它的含义是从零手搓，而不是从零教学，因此对于没有过神经网络/机器学习基础的同学来说，学习起来还是比较困难的，需要有较为完善的体系知识。  先叠个甲，我之前的背景是纯工程开发，大概在 25 年初开始转向 Agent 开发，此前也没有过系统的机器学习、神经网络学习经验，因此我学习 CS336 的过程也是逐渐查漏补缺，即用即学，如果专业的算法同学发现文章有不当之处，欢迎指正  学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Tra...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>Related Articles</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-20</div><div class="info-item-2">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</div></div><div class="info-2"><div class="info-item-1">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇 本文除图片以外，90% 内容为古法手搓，仅用 AI 润色  前言最近我在学习 CS336「Language Modeling from Scratch」，是斯坦福大学的大语言模型构建课程。这门课程在各种社交媒体（X）中都很火爆，但是在内网似乎没有多少人分享过，所以我想写一系列文章来分享一下我的学习过程。 虽然课程名字中叫「from Scratch」，但是它的含义是从零手搓，而不是从零教学，因此对于没有过神经网络/机器学习基础的同学来说，学习起来还是比较困难的，需要有较为完善的体系知识。  先叠个甲，我之前的背景是纯工程开发，大概在 25 年初开始转向 Agent 开发，此前也没有过系统的机器学习、神经网络学习经验，因此我学习 CS336 的过程也是逐渐查漏补缺，即用即学，如果专业的算法同学发现文章有不当之处，欢迎指正  学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Tra...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">风业</div><div class="author-info-description">fengye's blog</div><div class="site-data"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fengye404"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%B5%8B%E8%AF%95%E7%8E%AF%E5%A2%83%E5%92%8C%E6%A8%A1%E5%9E%8B%E7%89%88%E6%9C%AC"><span class="toc-number">1.</span> <span class="toc-text">1. 测试环境和模型版本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E9%83%A8%E7%BD%B2%E6%97%B6%E6%80%8E%E4%B9%88%E6%8E%A7%E5%88%B6%E5%86%85%E5%AD%98"><span class="toc-number">2.</span> <span class="toc-text">2. 部署时怎么控制内存</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E4%BB%8E-512-%E5%88%B0-256K%EF%BC%8C%E9%80%9F%E5%BA%A6%E5%8F%98%E5%8C%96%E6%9C%89%E5%A4%9A%E5%A4%A7"><span class="toc-number">3.</span> <span class="toc-text">3. 从 512 到 256K，速度变化有多大</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95"><span class="toc-number">3.1.</span> <span class="toc-text">测试方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B5%8B%E8%AF%95%E7%BB%93%E6%9E%9C"><span class="toc-number">3.2.</span> <span class="toc-text">测试结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#MTP-%E8%A6%81%E4%B8%8D%E8%A6%81%E5%BC%80"><span class="toc-number">3.3.</span> <span class="toc-text">MTP 要不要开</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E8%BE%93%E5%87%BA%E8%B4%A8%E9%87%8F%E6%A3%80%E6%9F%A5"><span class="toc-number">4.</span> <span class="toc-text">4. 输出质量检查</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E5%A4%8D%E6%B5%8B%E6%97%B6%E9%9C%80%E8%A6%81%E6%B3%A8%E6%84%8F%E7%9A%84%E5%9C%B0%E6%96%B9"><span class="toc-number">5.</span> <span class="toc-text">5. 复测时需要注意的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E5%AE%9E%E9%99%85%E4%BD%BF%E7%94%A8%E6%97%B6%E6%80%8E%E4%B9%88%E9%80%89"><span class="toc-number">6.</span> <span class="toc-text">6. 实际使用时怎么选</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B5%8B%E8%AF%95%E6%95%B0%E6%8D%AE%E4%B8%8E%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="toc-number">7.</span> <span class="toc-text">测试数据与参考资料</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Posts</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/11/qwen38-flash-next-m5max-benchmark/" title="128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</a><time datetime="2026-10-11T04:15:52.000Z" title="Created 2026-10-11 12:15:52">2026-10-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</a><time datetime="2026-09-19T17:45:00.000Z" title="Created 2026-09-20 01:45:00">2026-09-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><time datetime="2026-03-21T20:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子">TermPilot：你的远程 vibe coding 搭子</a><time datetime="2026-03-20T18:10:00.000Z" title="Created 2026-03-21 02:10:00">2026-03-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践">GitHub Profile 自动同步实践</a><time datetime="2026-03-07T10:10:00.000Z" title="Created 2026-03-07 18:10:00">2026-03-07</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2024 - 2026 By 风业</span><span class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Reading Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light and Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle Between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Settings"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table of Contents"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="Back to Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+<h3 id="测试参数"><a href="#测试参数" class="headerlink" title="测试参数"></a>测试参数</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>设置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>同时加载模型 &#x2F; 并发请求</td>
+<td>1 &#x2F; 1</td>
+</tr>
+<tr>
+<td>目标输入长度（token）</td>
+<td>512、4,096、16,384、32,768、65,536、131,072、200,000、261,632</td>
+</tr>
+<tr>
+<td>上下文窗口</td>
+<td>262,144 token</td>
+</tr>
+<tr>
+<td>最大输出长度</td>
+<td>256 token</td>
+</tr>
+<tr>
+<td>Temperature &#x2F; Seed</td>
+<td>0 &#x2F; 42</td>
+</tr>
+<tr>
+<td>思考模式 &#x2F; 前缀缓存</td>
+<td>关闭 &#x2F; 关闭</td>
+</tr>
+<tr>
+<td>Prefill 分块</td>
+<td>1,024 token</td>
+</tr>
+<tr>
+<td>重复次数</td>
+<td>32K 及以下每项 3 次，64K 及以上每项 2 次</td>
+</tr>
+<tr>
+<td>独立测速项</td>
+<td>240 项</td>
+</tr>
+<tr>
+<td>服务重启</td>
+<td>每个上下文批次重启</td>
+</tr>
+<tr>
+<td>系统文件缓存</td>
+<td>不强制清空</td>
+</tr>
+<tr>
+<td>中文语料</td>
+<td>Wikimedia Wikipedia <code>20231101.zh</code>，前 100 条训练文本</td>
+</tr>
+<tr>
+<td>英文语料</td>
+<td>Wikimedia Wikipedia <code>20231101.en</code>，前 100 条训练文本</td>
+</tr>
+<tr>
+<td>代码语料</td>
+<td>CPython v3.12.0，<code>Lib/*.py</code> 按路径排序，排除 test 目录</td>
+</tr>
+</tbody></table>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="https://fengye404.top">风业</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/">https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles on this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless otherwise stated.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Qwen/">Qwen</a><a class="post-meta__tags" href="/tags/MLX/">MLX</a><a class="post-meta__tags" href="/tags/%E6%9C%AC%E5%9C%B0%E9%83%A8%E7%BD%B2/">本地部署</a></div><div class="post-share"><div class="social-share" data-image="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" data-sites="x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">Next</div><div class="info-item-2">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</div></div><div class="info-2"><div class="info-item-1">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇 本文除图片以外，90% 内容为古法手搓，仅用 AI 润色  前言最近我在学习 CS336「Language Modeling from Scratch」，是斯坦福大学的大语言模型构建课程。这门课程在各种社交媒体（X）中都很火爆，但是在内网似乎没有多少人分享过，所以我想写一系列文章来分享一下我的学习过程。 虽然课程名字中叫「from Scratch」，但是它的含义是从零手搓，而不是从零教学，因此对于没有过神经网络/机器学习基础的同学来说，学习起来还是比较困难的，需要有较为完善的体系知识。  先叠个甲，我之前的背景是纯工程开发，大概在 25 年初开始转向 Agent 开发，此前也没有过系统的机器学习、神经网络学习经验，因此我学习 CS336 的过程也是逐渐查漏补缺，即用即学，如果专业的算法同学发现文章有不当之处，欢迎指正  学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Tra...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>Related Articles</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-20</div><div class="info-item-2">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</div></div><div class="info-2"><div class="info-item-1">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇 本文除图片以外，90% 内容为古法手搓，仅用 AI 润色  前言最近我在学习 CS336「Language Modeling from Scratch」，是斯坦福大学的大语言模型构建课程。这门课程在各种社交媒体（X）中都很火爆，但是在内网似乎没有多少人分享过，所以我想写一系列文章来分享一下我的学习过程。 虽然课程名字中叫「from Scratch」，但是它的含义是从零手搓，而不是从零教学，因此对于没有过神经网络/机器学习基础的同学来说，学习起来还是比较困难的，需要有较为完善的体系知识。  先叠个甲，我之前的背景是纯工程开发，大概在 25 年初开始转向 Agent 开发，此前也没有过系统的机器学习、神经网络学习经验，因此我学习 CS336 的过程也是逐渐查漏补缺，即用即学，如果专业的算法同学发现文章有不当之处，欢迎指正  学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Tra...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">风业</div><div class="author-info-description">fengye's blog</div><div class="site-data"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fengye404"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%A8%A1%E5%9E%8B%E9%83%A8%E7%BD%B2"><span class="toc-number">1.</span> <span class="toc-text">1. 模型部署</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Ngram-%E8%A1%A8%E4%B8%8E%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84"><span class="toc-number">1.1.</span> <span class="toc-text">Ngram 表与内存映射</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#MTP-%E6%8E%A8%E6%B5%8B%E8%A7%A3%E7%A0%81"><span class="toc-number">1.2.</span> <span class="toc-text">MTP 推测解码</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%86%85%E5%AD%98%E5%8D%A0%E7%94%A8"><span class="toc-number">2.</span> <span class="toc-text">2. 内存占用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E6%8E%A8%E7%90%86%E6%80%A7%E8%83%BD"><span class="toc-number">3.</span> <span class="toc-text">3. 推理性能</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95"><span class="toc-number">3.1.</span> <span class="toc-text">测试方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B5%8B%E8%AF%95%E7%BB%93%E6%9E%9C"><span class="toc-number">3.2.</span> <span class="toc-text">测试结果</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#MTP-%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-number">3.3.</span> <span class="toc-text">MTP 性能对比</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%99%84%EF%BC%9A%E6%B5%8B%E8%AF%95%E9%85%8D%E7%BD%AE"><span class="toc-number">4.</span> <span class="toc-text">附：测试配置</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%A1%AC%E4%BB%B6%E7%8E%AF%E5%A2%83"><span class="toc-number">4.1.</span> <span class="toc-text">硬件环境</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BC%95%E6%93%8E%E9%85%8D%E7%BD%AE"><span class="toc-number">4.2.</span> <span class="toc-text">引擎配置</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B5%8B%E8%AF%95%E5%8F%82%E6%95%B0"><span class="toc-number">4.3.</span> <span class="toc-text">测试参数</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Posts</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/11/qwen38-flash-next-m5max-benchmark/" title="128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</a><time datetime="2026-10-11T04:15:52.000Z" title="Created 2026-10-11 12:15:52">2026-10-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</a><time datetime="2026-09-19T17:45:00.000Z" title="Created 2026-09-20 01:45:00">2026-09-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><time datetime="2026-03-21T20:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子">TermPilot：你的远程 vibe coding 搭子</a><time datetime="2026-03-20T18:10:00.000Z" title="Created 2026-03-21 02:10:00">2026-03-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践">GitHub Profile 自动同步实践</a><time datetime="2026-03-07T10:10:00.000Z" title="Created 2026-03-07 18:10:00">2026-03-07</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2024 - 2026 By 风业</span><span class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Reading Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light and Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle Between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Settings"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table of Contents"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="Back to Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
   const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
 
   window.pjax = new Pjax({
