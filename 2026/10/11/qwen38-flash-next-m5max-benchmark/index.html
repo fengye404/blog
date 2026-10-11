@@ -1,0 +1,426 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选 | fengye's blog</title><meta name="author" content="风业"><meta name="copyright" content="风业"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="本文由 AI 参与创作。模型部署、测速和数据整理由 Codex 在我的机器上执行，结论来自本机实测。测试时间为 2026 年 10 月 10 日至 11 日。  最近我想在 Mac 上部署一个 Qwen 系列模型，挑中了两个 Qwen3.8 Flash Next 的社区版本：一个做了专家剪枝，另一个保留更多专家、使用混合量化。我平时会开到 200K 上下文，所以只看几百 token 的速度没什么">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选">
+<meta property="og:url" content="https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/index.html">
+<meta property="og:site_name" content="fengye&#39;s blog">
+<meta property="og:description" content="本文由 AI 参与创作。模型部署、测速和数据整理由 Codex 在我的机器上执行，结论来自本机实测。测试时间为 2026 年 10 月 10 日至 11 日。  最近我想在 Mac 上部署一个 Qwen 系列模型，挑中了两个 Qwen3.8 Flash Next 的社区版本：一个做了专家剪枝，另一个保留更多专家、使用混合量化。我平时会开到 200K 上下文，所以只看几百 token 的速度没什么">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640">
+<meta property="article:published_time" content="2026-10-11T04:15:52.000Z">
+<meta property="article:modified_time" content="2026-10-11T04:15:52.379Z">
+<meta property="article:author" content="风业">
+<meta property="article:tag" content="LLM">
+<meta property="article:tag" content="Qwen">
+<meta property="article:tag" content="MLX">
+<meta property="article:tag" content="本地部署">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选",
+  "url": "https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/",
+  "image": "https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640",
+  "datePublished": "2026-10-11T04:15:52.000Z",
+  "dateModified": "2026-10-11T04:15:52.379Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "风业",
+      "url": "https://fengye404.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"No results found for: ${query}","hits_stats":"${hits} articles found"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Failed',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: 'days',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><script>window.paceOptions = {
+  restartOnPushState: false
+}
+
+btf.addGlobalFn('pjaxSend', () => {
+  Pace.restart()
+}, 'pace_restart')
+
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js/themes/blue/pace-theme-minimal.min.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div class="bg-animation" id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">fengye's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  Back to Home</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> Search</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-10-11T04:15:52.000Z" title="Created 2026-10-11 12:15:52">2026-10-11</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-10-11T04:15:52.379Z" title="Updated 2026-10-11 12:15:52">2026-10-11</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">Word Count:</span><span class="word-count">2.6k</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post Views:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><div id="post-outdate-notice" data="{&quot;limitDay&quot;:720,&quot;messagePrev&quot;:&quot;It has been&quot;,&quot;messageNext&quot;:&quot;days since the last update, the content of the article may be outdated.&quot;,&quot;postUpdate&quot;:&quot;2026-10-11 12:15:52&quot;}" hidden></div><blockquote>
+<p>本文由 AI 参与创作。模型部署、测速和数据整理由 Codex 在我的机器上执行，结论来自本机实测。测试时间为 2026 年 10 月 10 日至 11 日。</p>
+</blockquote>
+<p>最近我想在 Mac 上部署一个 Qwen 系列模型，挑中了两个 Qwen3.8 Flash Next 的社区版本：一个做了专家剪枝，另一个保留更多专家、使用混合量化。我平时会开到 200K 上下文，所以只看几百 token 的速度没什么用。于是把测试上限直接拉到 256K，中文、英文和代码都跑了一遍。</p>
+<p>这一轮最后留下了 240 个独立测试项。两个模型都把 ngram 表放在 SSD 上，通过 mmap 按需读取，也分别测试了普通生成和 MTP 推测解码。</p>
+<p>先看结果。</p>
+<p><strong>对我这台 M5 Max &#x2F; 128 GiB，mixed 更适合长上下文；REAP 的优势是内存余量。mixed 开 MTP 能继续提速，REAP 开 MTP 在长上下文下反而变慢。</strong></p>
+<p><a href="/downloads/qwen38-m5max-benchmark/report.html">完整评测报告：96 组分领域统计、波动范围和测量口径</a></p>
+<span id="more"></span>
+
+<h2 id="两个模型，测的是整套部署方案"><a href="#两个模型，测的是整套部署方案" class="headerlink" title="两个模型，测的是整套部署方案"></a>两个模型，测的是整套部署方案</h2><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>REAP</th>
+<th>mixed</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hugging Face 仓库</td>
+<td><a target="_blank" rel="noopener" href="https://huggingface.co/sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit">sh0wie &#x2F; REAP-288-MLX-4bit</a></td>
+<td><a target="_blank" rel="noopener" href="https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit">ddalcu &#x2F; MLX-Serve-mixed-4-8bit</a></td>
+</tr>
+<tr>
+<td>专家数</td>
+<td>288</td>
+<td>512</td>
+</tr>
+<tr>
+<td>每 token 激活专家</td>
+<td>10</td>
+<td>10</td>
+</tr>
+<tr>
+<td>推理引擎</td>
+<td>mlx-vlm 0.7.6 &#x2F; MLX 0.32.3</td>
+<td>mlx-serve 26.10.1</td>
+</tr>
+<tr>
+<td>全套下载体积</td>
+<td>73.52 GB，约 68.47 GiB</td>
+<td>107.33 GB，含约 32 GB ngram 表</td>
+</tr>
+<tr>
+<td>ngram 加载</td>
+<td>SSD mmap，cache_rows&#x3D;0</td>
+<td>SSD mmap，关闭整表后台预热</td>
+</tr>
+</tbody></table>
+<p>机器是 Mac Studio，Apple M5 Max，18 核 CPU、40 核 GPU、128 GiB 统一内存，系统为 macOS 27.0。</p>
+<p>我固定了模型 revision，下载后对权重做 SHA-256 校验。REAP 使用 <code>668f31bcc56bf9400e64c9463445eee47597c2d9</code>，mixed 使用 <code>31919167b2e4549167cd4729b782f3155e75b686</code>。REAP 的 MTP drafter 另占约 5.24 GB。</p>
+<p>这里比较的是两套实际可用的部署：权重不同，引擎也不同。速度差异不能全部算在剪枝或量化头上。专家从 512 剪到 288，也不代表计算量按比例下降，因为两者每个 token 都激活 10 个专家。</p>
+<h2 id="怎么测"><a href="#怎么测" class="headerlink" title="怎么测"></a>怎么测</h2><p>输入长度用了 512、4,096、16,384、32,768、65,536、131,072、200,000 和 261,632 八档。最后一档对应 262,144 token 的原生上下文窗口，给输出留空间，文中简称 256K 档。</p>
+<p>中文和英文取固定 Wikipedia 文本，代码取 CPython 3.12.0 标准库源码，截取真实语料前缀，没有循环拼接一段短文凑长度。每份输入在前、中、后插入三个校验码，要求模型先提取，再分析文本或代码。</p>
+<p>短至 32K 的输入重复三次，64K 及以上重复两次。四种方案乘三类输入，合计 240 项。输出预算统一为 256 token，temperature&#x3D;0，关闭思考和前缀缓存，prefill chunk&#x3D;1024，始终只加载一个大模型。</p>
+<p>Prefill 是处理输入的速度，decode 是生成输出的速度，首 token 时间包含请求和分词等开销。完整报告按领域分别列中位数和最小—最大值。下文总表把同一档三个领域的全部轮次合并取中位数。</p>
+<p>缓存得说清。</p>
+<p>mixed 设置了 <code>MLX_SERVE_NGRAM_WARM=0</code>，不主动把整张 ngram 表预热进文件缓存；macOS 自己的页缓存仍然存在，也没有强制清空。进程刚启动，并不等于 SSD 缓存是冷的。首轮的新形状编译、按需读页会拉低速度，这些轮次都保留了。</p>
+<h2 id="从-512-到-256K，速度怎么变"><a href="#从-512-到-256K，速度怎么变" class="headerlink" title="从 512 到 256K，速度怎么变"></a>从 512 到 256K，速度怎么变</h2><p><img src="/downloads/qwen38-m5max-benchmark/speed-curves.png" alt="中文、英文和代码在不同输入长度下的 prefill 与 decode 速度" loading='lazy'></p>
+<p>图中实线为普通模式，虚线为 MTP；误差棒是实际最小到最大值。连线仅连接测量点。</p>
+<p>先看我最关心的两个长输入档位：</p>
+<table>
+<thead>
+<tr>
+<th>输入档位</th>
+<th>方案</th>
+<th align="right">Prefill tok&#x2F;s</th>
+<th align="right">Decode tok&#x2F;s</th>
+<th align="right">首 token 秒</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>200K</td>
+<td>REAP</td>
+<td align="right">1,047.5</td>
+<td align="right">20.9</td>
+<td align="right">191.2</td>
+</tr>
+<tr>
+<td>200K</td>
+<td>REAP + MTP</td>
+<td align="right">1,044.9</td>
+<td align="right">19.0</td>
+<td align="right">191.7</td>
+</tr>
+<tr>
+<td>200K</td>
+<td>mixed</td>
+<td align="right">1,855.6</td>
+<td align="right">56.3</td>
+<td align="right">108.0</td>
+</tr>
+<tr>
+<td>200K</td>
+<td>mixed + MTP</td>
+<td align="right">1,892.6</td>
+<td align="right">74.8</td>
+<td align="right">105.9</td>
+</tr>
+<tr>
+<td>256K</td>
+<td>REAP</td>
+<td align="right">970.8</td>
+<td align="right">17.8</td>
+<td align="right">269.8</td>
+</tr>
+<tr>
+<td>256K</td>
+<td>REAP + MTP</td>
+<td align="right">995.1</td>
+<td align="right">15.1</td>
+<td align="right">263.2</td>
+</tr>
+<tr>
+<td>256K</td>
+<td>mixed</td>
+<td align="right">1,856.5</td>
+<td align="right">56.1</td>
+<td align="right">141.1</td>
+</tr>
+<tr>
+<td>256K</td>
+<td>mixed + MTP</td>
+<td align="right">1,823.3</td>
+<td align="right">74.5</td>
+<td align="right">143.9</td>
+</tr>
+</tbody></table>
+<p>mixed 跑起来挺快的。普通模式下，输入从 512 增长到 256K，decode 从约 66.8 tok&#x2F;s 降到 56.1；REAP 则从约 43.5 降到 17.8。到长上下文时，两套方案的差距比短输入时更大。</p>
+<p>但 256K 首次输入依然要等：mixed 普通模式的首 token 中位数约 141 秒。这个测试关闭了前缀缓存，不能拿来预测日常多轮对话复用历史缓存后的等待时间。</p>
+<h3 id="MTP-的收益要单独看"><a href="#MTP-的收益要单独看" class="headerlink" title="MTP 的收益要单独看"></a>MTP 的收益要单独看</h3><p>mixed 在 200K&#x2F;256K 开启 MTP 后，decode 约提高 33%。代码场景的收益更大，完整图里能看到领域差异。</p>
+<p>REAP 就有点坑。它的 MTP 在这两档分别降到约 19 和 15 tok&#x2F;s，还额外占用内存。对我的长上下文用途，没有开它的理由。</p>
+<p>我还比较了相同输入下的首轮完整输出。REAP 普通模式与 MTP 有 24&#x2F;24 份逐字一致；mixed 只有 3&#x2F;24 份一致。mixed 的校验码命中没有下降，但这份小测试不足以证明其他任务质量不变。需要复现普通模式输出时，我会保留普通模式。</p>
+<h2 id="内存为什么比模型文件小"><a href="#内存为什么比模型文件小" class="headerlink" title="内存为什么比模型文件小"></a>内存为什么比模型文件小</h2><p>测速中我看了一眼活动监视器，REAP 的 Python 进程大约 49 GB，跟下载时看到的体积差不少。其实模型文件、MLX 分配量、进程内存和系统文件缓存是不同口径。</p>
+<p>ngram 放在 SSD 上，访问过的文件页仍会进入 RAM 缓存，内存紧张时再回收。它没有消失，也不需要整张表始终作为 GPU 活跃分配驻留。</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th align="right">全部速度测试的 MLX 最高分配量</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>REAP</td>
+<td align="right">55.46 GB</td>
+</tr>
+<tr>
+<td>REAP + MTP</td>
+<td align="right">60.68 GB</td>
+</tr>
+<tr>
+<td>mixed</td>
+<td align="right">80.64 GB</td>
+</tr>
+<tr>
+<td>mixed + MTP</td>
+<td align="right">84.30 GB</td>
+</tr>
+</tbody></table>
+<p>这些数值不能和活动监视器中的 RSS 直接相加。REAP 每次请求重置 MLX 峰值，mixed 取当前服务进程的高水位；后者每个上下文批次重启。两边的 MLX 缓存上限也不同，分别为 4 GiB 和 8 GiB。</p>
+<p>128 GiB 跑两者都够用。REAP 留给其他应用的空间更多。正式请求采样到的系统 Swapouts 增量均为零，但系统原有 swap 和文件缓存仍会影响运行环境，不能把这个结果扩展成所有并发负载下都不会换页。</p>
+<h2 id="输出质量和“困惑度”测到了什么"><a href="#输出质量和“困惑度”测到了什么" class="headerlink" title="输出质量和“困惑度”测到了什么"></a>输出质量和“困惑度”测到了什么</h2><p>四种方案的六个简单任务都通过了五个，同一个算术样本答错。这个规模只能当冒烟测试，本次也没有在本地跑 HumanEval。</p>
+<p>检索校验码方面，REAP 两种模式各为 177&#x2F;180，mixed 两种模式各为 180&#x2F;180。REAP 的三次错误来自同一份 4K 英文输入的同一个码。200K 和 256K 的校验码全部通过，但三个短码提取通过，远远不能代替复杂长文理解测试。</p>
+<p>我原本还想直接对比困惑度，接口在这里卡住了：原生引擎最多返回 top-1024 logprobs，拿不到任意目标 token 的完整概率。于是采用固定中英代码文本上的 96 个采样位置，比较两边共同可评分的 95 个位置。</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th align="right">共同位置平均 NLL</th>
+<th align="right">exp(平均 NLL)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>REAP</td>
+<td align="right">2.1034</td>
+<td align="right">8.1937</td>
+</tr>
+<tr>
+<td>mixed</td>
+<td align="right">1.7881</td>
+<td align="right">5.9780</td>
+</tr>
+</tbody></table>
+<p>分数上 mixed 更好。这里的 exp(NLL) <strong>不能当作完整语料 PPL</strong>：样本很少，而且只取共同可评分的位置，会偏向容易预测的 token。缺失概率没有用伪数值补齐，REAP 的 logits 归一化也改成了 FP32，避免低精度舍入。</p>
+<h2 id="这轮测试踩的坑"><a href="#这轮测试踩的坑" class="headerlink" title="这轮测试踩的坑"></a>这轮测试踩的坑</h2><p>最开始报告只列已完成的结果，我又优先跑了 200K&#x2F;256K，页面上就出现了从 512 直接跳到 200K 的情况。看起来像漏测了。后来补上完整覆盖表，才把待测、正在测和校验异常分开。</p>
+<p>另一个坑是分词。两模型的 tokenizer 文件相同，但原生引擎和 Hugging Face 的实现给出了不同序列。例如同一份中文长输入，前者返回 200,020 token，后者是 200,002。早期校验把这些记录排除了。</p>
+<p>后来通过 <code>/tokenize</code> 单独核对，所有异常输入的两套序列都能完整还原原文，usage 与原生分词计数一致，实际输入加输出预算也没有超出窗口。最终按实际引擎 token 数计速，保留分词差异说明。两边收到的是相同文本，这仍然不能解释为完全相同 token 序列下的对照实验。</p>
+<p>加载也翻车了。mixed 在权重预计算阶段记录了六次 GPU 超时；电脑中途还重启过一次。最后把缺失批次单独补跑成功，才凑齐 240 项。原始文件共 264 条速度记录，多出的 24 条重跑没有重复加权，统计采用每个测试项第一条通过核查的结果。</p>
+<p>补测成功。</p>
+<p>但加载超时的根因还没确认，不能写成稳定性问题已经修好了。测试跨重启和恢复过程，系统缓存状态也不完全一致；两个请求期间还执行过短暂的 CPU 分词核查。这是一台日常使用的电脑上的部署评测。</p>
+<p>跑这种长任务，又回到了我写 TermPilot 时那个念头：人不能一直钉在显示器前。至少这次检查点和原始记录留住了，重启后不用整晚重来。</p>
+<h2 id="我会怎么选"><a href="#我会怎么选" class="headerlink" title="我会怎么选"></a>我会怎么选</h2><p>日常 200K&#x2F;256K，我会先用 mixed 普通模式。需要更快生成时再开 MTP，并接受它在这套运行时上输出会变化这个事实。REAP 留给更重视内存余量的场景，长上下文保持普通模式。</p>
+<p>这轮每次只生成最多 256 token，没有覆盖长输出、并发、多轮缓存命中和复杂问答。完整的八档速度、中文英文代码分组、首轮波动和内存峰值都放在下面，查自己的使用场景比只看一张总榜更有用。</p>
+<ul>
+<li><a href="/downloads/qwen38-m5max-benchmark/report.html">完整 HTML 报告</a></li>
+<li><a href="/downloads/qwen38-m5max-benchmark/summary.json">结构化统计数据</a></li>
+<li><a href="/downloads/qwen38-m5max-benchmark/benchmark-plan.json">测试配置与版本</a></li>
+<li><a href="/downloads/qwen38-m5max-benchmark/tokenizer-audit.json">分词核查证据</a></li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="https://fengye404.top">风业</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/">https://fengye404.top/2026/10/11/qwen38-flash-next-m5max-benchmark/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles on this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless otherwise stated.</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/LLM/">LLM</a><a class="post-meta__tags" href="/tags/Qwen/">Qwen</a><a class="post-meta__tags" href="/tags/MLX/">MLX</a><a class="post-meta__tags" href="/tags/%E6%9C%AC%E5%9C%B0%E9%83%A8%E7%BD%B2/">本地部署</a></div><div class="post-share"><div class="social-share" data-image="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" data-sites="x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">Next</div><div class="info-item-2">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</div></div><div class="info-2"><div class="info-item-1">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇 本文除图片以外，90% 内容为古法手搓，仅用 AI 润色  前言最近我在学习 CS336「Language Modeling from Scratch」，是斯坦福大学的大语言模型构建课程。这门课程在各种社交媒体（X）中都很火爆，但是在内网似乎没有多少人分享过，所以我想写一系列文章来分享一下我的学习过程。 虽然课程名字中叫「from Scratch」，但是它的含义是从零手搓，而不是从零教学，因此对于没有过神经网络/机器学习基础的同学来说，学习起来还是比较困难的，需要有较为完善的体系知识。  先叠个甲，我之前的背景是纯工程开发，大概在 25 年初开始转向 Agent 开发，此前也没有过系统的机器学习、神经网络学习经验，因此我学习 CS336 的过程也是逐渐查漏补缺，即用即学，如果专业的算法同学发现文章有不当之处，欢迎指正  学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Tra...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>Related Articles</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-09-20</div><div class="info-item-2">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</div></div><div class="info-2"><div class="info-item-1">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇 本文除图片以外，90% 内容为古法手搓，仅用 AI 润色  前言最近我在学习 CS336「Language Modeling from Scratch」，是斯坦福大学的大语言模型构建课程。这门课程在各种社交媒体（X）中都很火爆，但是在内网似乎没有多少人分享过，所以我想写一系列文章来分享一下我的学习过程。 虽然课程名字中叫「from Scratch」，但是它的含义是从零手搓，而不是从零教学，因此对于没有过神经网络/机器学习基础的同学来说，学习起来还是比较困难的，需要有较为完善的体系知识。  先叠个甲，我之前的背景是纯工程开发，大概在 25 年初开始转向 Agent 开发，此前也没有过系统的机器学习、神经网络学习经验，因此我学习 CS336 的过程也是逐渐查漏补缺，即用即学，如果专业的算法同学发现文章有不当之处，欢迎指正  学习这门课程，最主要的就是完成它的 Assignment 作业，这一篇是这个系列中的第一篇文章，会跟随 CS336 Assignment1 的思路，完整介绍如何从零手搓一个 Tra...</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">风业</div><div class="author-info-description">fengye's blog</div><div class="site-data"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">37</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fengye404"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%A4%E4%B8%AA%E6%A8%A1%E5%9E%8B%EF%BC%8C%E6%B5%8B%E7%9A%84%E6%98%AF%E6%95%B4%E5%A5%97%E9%83%A8%E7%BD%B2%E6%96%B9%E6%A1%88"><span class="toc-number">1.</span> <span class="toc-text">两个模型，测的是整套部署方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%8E%E4%B9%88%E6%B5%8B"><span class="toc-number">2.</span> <span class="toc-text">怎么测</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%8E-512-%E5%88%B0-256K%EF%BC%8C%E9%80%9F%E5%BA%A6%E6%80%8E%E4%B9%88%E5%8F%98"><span class="toc-number">3.</span> <span class="toc-text">从 512 到 256K，速度怎么变</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#MTP-%E7%9A%84%E6%94%B6%E7%9B%8A%E8%A6%81%E5%8D%95%E7%8B%AC%E7%9C%8B"><span class="toc-number">3.1.</span> <span class="toc-text">MTP 的收益要单独看</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E4%B8%BA%E4%BB%80%E4%B9%88%E6%AF%94%E6%A8%A1%E5%9E%8B%E6%96%87%E4%BB%B6%E5%B0%8F"><span class="toc-number">4.</span> <span class="toc-text">内存为什么比模型文件小</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BE%93%E5%87%BA%E8%B4%A8%E9%87%8F%E5%92%8C%E2%80%9C%E5%9B%B0%E6%83%91%E5%BA%A6%E2%80%9D%E6%B5%8B%E5%88%B0%E4%BA%86%E4%BB%80%E4%B9%88"><span class="toc-number">5.</span> <span class="toc-text">输出质量和“困惑度”测到了什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BF%99%E8%BD%AE%E6%B5%8B%E8%AF%95%E8%B8%A9%E7%9A%84%E5%9D%91"><span class="toc-number">6.</span> <span class="toc-text">这轮测试踩的坑</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%88%91%E4%BC%9A%E6%80%8E%E4%B9%88%E9%80%89"><span class="toc-number">7.</span> <span class="toc-text">我会怎么选</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Posts</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/11/qwen38-flash-next-m5max-benchmark/" title="Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选">Qwen3.8 Flash Next 本地实测：M5 Max 128GB 跑到 256K，REAP 和 mixed 怎么选</a><time datetime="2026-10-11T04:15:52.000Z" title="Created 2026-10-11 12:15:52">2026-10-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</a><time datetime="2026-09-19T17:45:00.000Z" title="Created 2026-09-20 01:45:00">2026-09-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><time datetime="2026-03-21T20:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/21/TermPilot%EF%BC%9A%E4%BD%A0%E7%9A%84%E8%BF%9C%E7%A8%8B%20vibe%20coding%20%E6%90%AD%E5%AD%90/" title="TermPilot：你的远程 vibe coding 搭子">TermPilot：你的远程 vibe coding 搭子</a><time datetime="2026-03-20T18:10:00.000Z" title="Created 2026-03-21 02:10:00">2026-03-21</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/07/GitHub-Profile%E8%87%AA%E5%8A%A8%E5%90%8C%E6%AD%A5%E5%AE%9E%E8%B7%B5/" title="GitHub Profile 自动同步实践">GitHub Profile 自动同步实践</a><time datetime="2026-03-07T10:10:00.000Z" title="Created 2026-03-07 18:10:00">2026-03-07</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2024 - 2026 By 风业</span><span class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Reading Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light and Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle Between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Settings"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table of Contents"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="Back to Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  Loading Database</span></div><div class="local-search-input"><input placeholder="Search for Posts" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

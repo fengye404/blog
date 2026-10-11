@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="340" viewBox="0 0 760 340" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="ax" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#8c959f"/>
+    </marker>
+  </defs>
+  <rect x="0.5" y="0.5" width="759" height="339" rx="10" fill="#fafbfc" stroke="#d0d7de"/>
+
+  <line x1="240" y1="260" x2="700" y2="260" stroke="#8c959f" marker-end="url(#ax)"/>
+  <line x1="240" y1="260" x2="240" y2="60" stroke="#8c959f" marker-end="url(#ax)"/>
+  <text x="240" y="278" font-size="12" fill="#8c959f" text-anchor="middle">x₀</text>
+  <text x="226" y="60" font-size="12" fill="#8c959f" text-anchor="end">x₁</text>
+
+  <line x1="240" y1="260" x2="421" y2="175" stroke="#8c959f" stroke-dasharray="5 4"/>
+  <circle cx="421" cy="175" r="4" fill="#8c959f"/>
+  <text x="430" y="170" font-size="12" fill="#57606a">旋转前</text>
+
+  <line x1="240" y1="260" x2="355" y2="96" stroke="#0969da" stroke-width="2"/>
+  <circle cx="355" cy="96" r="4" fill="#0969da"/>
+  <text x="364" y="90" font-size="12" fill="#0969da">旋转 mθ 后</text>
+
+  <path d="M 303 230 A 70 70 0 0 0 280 203" fill="none" stroke="#bc4c00" stroke-width="1.5"/>
+  <text x="315" y="208" font-size="12" fill="#bc4c00">mθ</text>
+
+  <text x="480" y="120" font-size="13" fill="#24292f">每一对分量 (x₀, x₁) 看成复平面上的点</text>
+  <text x="480" y="146" font-size="13" fill="#24292f">位置 m 就旋转 mθ，位置 n 就旋转 nθ</text>
+  <text x="480" y="172" font-size="13" fill="#24292f">q 和 k 做点积时角度相减</text>
+  <text x="480" y="198" font-size="13" fill="#bc4c00">只剩 (m − n)θ，只跟相对距离有关</text>
+
+  <text x="40" y="312" font-size="12" fill="#57606a">同一个 q、k 向量，只要位置差一样，点积结果就一样 —— 这就是 RoPE 想要的相对位置。</text>
+</svg>
