@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-10",
+  "hardware": {
+    "model": "Mac Studio",
+    "chip": "Apple M5 Max",
+    "cpu_cores": 18,
+    "gpu_cores": 40,
+    "unified_memory_GiB": 128,
+    "macOS": "27.0"
+  },
+  "models": {
+    "reap": {
+      "repository": "sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit",
+      "revision": "668f31bcc56bf9400e64c9463445eee47597c2d9",
+      "engine": "mlx-vlm 0.7.6 / mlx 0.32.3",
+      "ngram": "SSD mmap, ple_storage, cache_rows=0"
+    },
+    "mixed": {
+      "repository": "ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit",
+      "revision": "31919167b2e4549167cd4729b782f3155e75b686",
+      "engine": "mlx-serve 26.10.1",
+      "ngram": "SSD mmap, ngram_table.bin, ple-gpu disabled, MLX_SERVE_NGRAM_WARM=0"
+    }
+  },
+  "input_token_targets": [
+    512,
+    4096,
+    16384,
+    32768,
+    65536,
+    131072,
+    200000,
+    261632
+  ],
+  "native_context_window_tokens": 262144,
+  "max_output_tokens": 256,
+  "workloads": [
+    "Chinese document analysis",
+    "English document analysis",
+    "Python code review"
+  ],
+  "prefill_chunk": 1024,
+  "repeats_up_to_32K": 3,
+  "repeats_above_32K": 2,
+  "temperature": 0,
+  "seed": 42,
+  "prefix_cache": false,
+  "metrics": [
+    "actual input/output token count",
+    "engine prefill tok/s",
+    "engine decode tok/s",
+    "client first-token latency",
+    "client decode tok/s",
+    "MLX peak allocation when exposed",
+    "sampled RSS peak",
+    "system swap before/after",
+    "failures"
+  ],
+  "quality": "6 deterministic smoke tasks plus 96 sampled next-token predictions from fixed Chinese/English/code reference text; report coverage and missing targets, do not mislabel truncated logprobs as full-corpus perplexity",
+  "limitations": [
+    "different inference engines; this is deployment comparison, not isolated weight comparison",
+    "real public text/code prefixes, not a full long-document comprehension benchmark",
+    "OS page cache is not force-cleared; process-cold is not SSD-cold",
+    "short tests are not HumanEval",
+    "long-context failures must be reported, not silently omitted"
+  ],
+  "verification": "downloaded weight SHA-256 must match original Hugging Face API metadata even when hf-mirror resolver is used",
+  "corpora": {
+    "zh": "wikimedia/wikipedia 20231101.zh first 100 train rows",
+    "en": "wikimedia/wikipedia 20231101.en first 100 train rows",
+    "code": "CPython v3.12.0 Lib/*.py sorted paths, excluding test directory"
+  },
+  "planned_input_tokens_per_variant": 4433280,
+  "planned_variants": [
+    "reap",
+    "reap-mtp",
+    "mixed",
+    "mixed-mtp"
+  ],
+  "long_context_check": "Three deterministic verification codes inserted near beginning, middle and end of each real-corpus speed prompt; record per-code retrieval. This is not a general comprehension benchmark.",
+  "execution_order": {
+    "context_order": [
+      512,
+      200000,
+      261632,
+      4096,
+      16384,
+      32768,
+      65536,
+      131072
+    ],
+    "modes": "baseline both models first, then MTP; restart model for each context batch",
+    "reason": "prioritize daily 200K and native-limit comparisons"
+  }
+}

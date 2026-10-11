@@ -1,0 +1,32 @@
+{
+  "reap": {
+    "unique_valid_speed_rows": 60,
+    "audited_tokenization_rows": 0,
+    "retrieval_hits": 177,
+    "retrieval_checks": 180,
+    "mlx_peak_GB": 55.460882627
+  },
+  "mixed": {
+    "unique_valid_speed_rows": 60,
+    "audited_tokenization_rows": 25,
+    "retrieval_hits": 180,
+    "retrieval_checks": 180,
+    "mlx_peak_GB": 80.643859888
+  },
+  "reap-mtp": {
+    "unique_valid_speed_rows": 60,
+    "audited_tokenization_rows": 0,
+    "retrieval_hits": 177,
+    "retrieval_checks": 180,
+    "mlx_peak_GB": 60.67641648
+  },
+  "mixed-mtp": {
+    "unique_valid_speed_rows": 60,
+    "audited_tokenization_rows": 25,
+    "retrieval_hits": 180,
+    "retrieval_checks": 180,
+    "mlx_peak_GB": 84.299474592
+  },
+  "verification": "All 240 planned cases present; identical source prompts; actual context budgets checked; first audited record per repeat retained.",
+  "time": 1791662688.560899
+}
