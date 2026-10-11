@@ -37,38 +37,38 @@ tags:
 
 ### 推理框架
 
-这次用 MLX，主要是因为前面选的两个模型已经有配套的运行实现，量化权重、ngram 加载和 MTP 都能沿用作者提供的方案。MLX 是 Apple 开源的机器学习框架，CPU 和 GPU 可以访问同一份数组，不需要在两者之间显式搬运数据；这里的 mlx-vlm、mlx-serve 则负责模型加载和推理服务。[MLX 官方说明](https://github.com/ml-explore/mlx#mlx)
+这次优先选 MLX，是因为它针对 Apple Silicon 的 GPU 和统一内存做了专门优化，适合在 Mac 上跑量化大模型：
+
+- **Metal 量化算子**：为量化矩阵乘法、矩阵与向量乘法提供专用 GPU 实现，按输入形状选择计算路径，覆盖 Prefill 和逐 token Decode。[Metal 实现](https://github.com/ml-explore/mlx/blob/main/mlx/backend/metal/quantized.cpp)
+- **统一内存**：CPU、GPU 直接访问同一份数组，混合执行时减少数据复制和额外内存占用。[统一内存设计](https://ml-explore.github.io/mlx/build/html/usage/unified_memory.html)
+- **计算图优化**：引擎使用 `mx.compile` 时，可以合并重复计算、融合算子，减少中间结果的内存读写和执行开销。[编译优化](https://ml-explore.github.io/mlx/build/html/usage/compile.html)
+
+这些优化直接服务于推理性能。再加上两个模型已有配套实现，量化权重、ngram 加载和 MTP 都可以沿用作者的方案；本文使用的 mlx-vlm、mlx-serve 负责具体的模型加载和推理服务。
 
 Mac 上也有其他选择：
 
 | 方案 | 特点 | 这次的取舍 |
 | --- | --- | --- |
-| MLX + 配套推理引擎 | 面向 Apple Silicon，提供 Python 接口；这两个模型包已有对应实现 | 直接使用作者适配好的权重和功能，方便复测 |
+| MLX + 配套推理引擎 | Apple Silicon 专用 Metal 算子、统一内存与计算图优化 | 优先使用原生优化，并沿用模型作者的配套实现 |
 | llama.cpp | 支持 Metal 加速、GGUF 模型和多种量化精度，也支持 CPU/GPU 混合推理 | 换用它需要对应的 GGUF 权重，并核对这个模型的架构和 MTP 支持 |
 | PyTorch + MPS | 通过 Metal 在 Apple GPU 上运行 PyTorch，适合沿用和修改 PyTorch 模型代码 | 量化算子和模型所需功能仍要逐项确认，不能把 CUDA 部署命令直接搬过来 |
 
-llama.cpp 的 Apple Silicon 支持和量化方案见[项目说明](https://github.com/ggml-org/llama.cpp#description)，MPS 的工作方式见 [Apple 的 PyTorch 文档](https://developer.apple.com/metal/pytorch/)。这轮没有做同一份模型、同一精度下的跨框架测速，所以这里只说明部署选择；后面的速度差别是两套完整方案的差别。
+llama.cpp 同样针对 Apple Silicon 做了 [Metal 优化](https://github.com/ggml-org/llama.cpp#description)，PyTorch 也有 [MPS 后端](https://developer.apple.com/metal/pytorch/)。具体谁更快取决于模型、量化格式和算子实现，本文没有做跨框架对照测速。
 
 ### 量化精度
 
-再看精度。这里的 4-bit、8-bit 指权重的存储位数，位数越少，权重占用越小。我们还要给长上下文和系统留内存，所以不能只看模型能不能加载进去。
+按完整权重约 180B（含 ngram、MTP）估算，各档精度的体积如下：
 
-按 mixed 作者给出的约 180B 完整权重口径，先用“参数量 × 位数 ÷ 8”粗算一下：
+| 权重精度 | 理论体积 |
+| --- | ---: |
+| BF16 / FP16 | 360 GB |
+| 8-bit | 180 GB |
+| 6-bit | 135 GB |
+| 4-bit | 90 GB |
 
-| 权重精度 | 理论权重体积 | 对这台 128G 机器的影响 |
-| --- | ---: | --- |
-| BF16 / FP16，16-bit | 360 GB | 无法全部常驻内存 |
-| 8-bit | 180 GB | 全部常驻仍超出容量 |
-| 6-bit | 135 GB | 还没算运行开销，就已经接近整机容量 |
-| 4-bit | 90 GB | 才有较多空间留给上下文和运行开销 |
+以上为统一位数下的十进制 GB，未计量化元数据和运行开销；实际常驻内存还受 ngram 按需加载影响。[模型组成](https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit#what-is-different-about-this-model)
 
-这里用十进制 GB，假设所有权重采用同一位数，包含 ngram 和 MTP。实际量化还要保存分组缩放参数，部分层也会保留更高精度；ngram 又可以按需从 SSD 读取，所以这张表是体积估算，实际内存占用看下一节。[模型组成说明](https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit#what-is-different-about-this-model) · [MLX 量化格式](https://ml-explore.github.io/mlx/build/html/python/_autosummary/mlx.core.quantize.html)
-
-**这次选 4-bit 为主，是为了在 128G 内存里跑长上下文。** mixed 把占大头的路由专家压到 4-bit，Attention、共享专家和输出层等用 8-bit，路由器、归一化等保留 BF16。REAP 则在 4-bit 量化之外，再减少专家数量，因此体积更小。两者具体设置见 [mixed 精度表](https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit#widths)和 [REAP 模型说明](https://huggingface.co/sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit)。
-
-位数减少也会引入量化误差。同样的位数下，怎么量化也有影响：mixed 作者报告，新 iQ 包与旧包体积相同，对 BF16 输出的 top-1 一致率从 87.9% 提升到 88.6%，KLD 中位数从 0.0066 降到 0.0052（越低代表输出分布越接近）。这是作者测得的输出接近程度，不是任务正确率，也不是我们这轮的实测。[作者对比](https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit#qwen38-flash-next-for-mlx-serve-4-bit-experts-8-bit-rest)
-
-我们没有把同一模型的 4-bit、6-bit、8-bit 全部测一遍，因此还不能判断各档精度损失多少、速度相差多少。下面先看这两套实际跑过的配置。
+这次选 **4-bit 为主的方案**，给长上下文留出内存。mixed 的路由专家用 4-bit，Attention、共享专家和输出层等用 8-bit，路由器、归一化等保留 BF16；REAP 在 4-bit 量化之外进一步剪枝，换取更低的占用。[mixed 精度配置](https://huggingface.co/ddalcu/Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit#widths) · [REAP 剪枝说明](https://huggingface.co/sh0wie/Qwen3.8-Flash-Next-REAP-288-MLX-4bit)
 
 ### Ngram 表与内存映射
 
