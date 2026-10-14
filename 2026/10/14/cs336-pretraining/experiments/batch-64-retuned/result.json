@@ -1,0 +1,1 @@
+{"name":"batch-64-retuned","status":"completed","reason":null,"steps":250,"tokens":4096000,"seconds":126.82404133400269,"val_loss":2.7766003608703613,"parameters":22696448,"full_val_loss":null}

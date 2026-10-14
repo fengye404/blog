@@ -1,0 +1,1 @@
+{"name":"batch-1-retuned","status":"completed","reason":null,"steps":16000,"tokens":4096000,"seconds":298.5640182499992,"val_loss":2.541343653202057,"parameters":22696448,"full_val_loss":null}

@@ -1,0 +1,1 @@
+{"name":"lr-stability-0.1","lr":0.1,"batch":32,"tokens":4096000,"variant":"baseline","dataset":"tiny","probe":false,"steps":500,"seed":42,"warmup_fraction":0.02,"context":256,"vocab":10000,"memory_budget_GiB":24}

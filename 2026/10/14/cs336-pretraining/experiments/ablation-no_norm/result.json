@@ -1,0 +1,1 @@
+{"name":"ablation-no_norm","status":"diverged","reason":"training loss > 50 for 10 consecutive steps","steps":123,"tokens":1007616,"seconds":22.264900084002875,"val_loss":null,"parameters":22691840}

@@ -1,0 +1,1 @@
+{"val_loss":1.6728506289856682,"perplexity":5.327332420769239,"windows":21382,"evaluated_tokens":5473792,"total_encoded_tokens":5473838,"context_length":256,"seconds":43.99190187500062,"method":"non-overlapping 256-token windows; drop incomplete final window"}

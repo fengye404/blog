@@ -1,0 +1,241 @@
+<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>fengye's blog | fengye's blog</title><meta name="author" content="风业"><meta name="copyright" content="风业"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="实验源码与复现这份目录保存预训练篇实际使用的脚本；训练在 Mac Studio 上运行，使用 MPS float32。它们是本次实验副本，未修改课程仓库的实现。 环境Python 3.12.14，依赖见 requirements.txt。脚本默认工作目录是自身所在目录，部分配置固定为本文的小模型。 数据 TinyStories: roneneldan&#x2F;TinyStories，revisi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="fengye&#39;s blog">
+<meta property="og:url" content="https://fengye404.top/2026/10/14/cs336-pretraining/experiment-code/README/index.html">
+<meta property="og:site_name" content="fengye&#39;s blog">
+<meta property="og:description" content="实验源码与复现这份目录保存预训练篇实际使用的脚本；训练在 Mac Studio 上运行，使用 MPS float32。它们是本次实验副本，未修改课程仓库的实现。 环境Python 3.12.14，依赖见 requirements.txt。脚本默认工作目录是自身所在目录，部分配置固定为本文的小模型。 数据 TinyStories: roneneldan&#x2F;TinyStories，revisi">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640">
+<meta property="article:published_time" content="2026-10-13T20:57:49.542Z">
+<meta property="article:modified_time" content="2026-10-14T04:40:49.549Z">
+<meta property="article:author" content="风业">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "",
+  "url": "https://fengye404.top/2026/10/14/cs336-pretraining/experiment-code/README/",
+  "image": "https://q1.qlogo.cn/g?b=qq&nk=1129126684&s=640",
+  "datePublished": "2026-10-13T20:57:49.542Z",
+  "dateModified": "2026-10-14T04:40:49.549Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "风业",
+      "url": "https://fengye404.top"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://fengye404.top/2026/10/14/cs336-pretraining/experiment-code/README/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!true && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"No results found for: ${query}","hits_stats":"${hits} articles found"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: 'Copy Successful',
+    error: 'Copy Failed',
+    noSupport: 'Browser Not Supported'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: 'days',
+  dateSuffix: {
+    just: 'Just now',
+    min: 'minutes ago',
+    hour: 'hours ago',
+    day: 'days ago',
+    month: 'months ago'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: 'Load More'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'fengye\'s blog',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 7.3.0"></head><body><script>window.paceOptions = {
+  restartOnPushState: false
+}
+
+btf.addGlobalFn('pjaxSend', () => {
+  Pace.restart()
+}, 'pace_restart')
+
+</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pace-js/themes/blue/pace-theme-minimal.min.css"/><script src="https://cdn.jsdelivr.net/npm/pace-js/pace.min.js"></script><div class="bg-animation" id="web_bg" style="background-image: url(/img/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="site-data text-center"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">39</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="not-top-img" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">fengye's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">fengye's blog</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  Back to Home</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> Search</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/bookmarks/"><i class="fa-fw fas fa-bookmark"></i><span> Bookmarks</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav></header><main class="layout" id="content-inner"><div id="post"><div id="post-info"><h1 class="post-title">Untitled</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">Created</span><time class="post-meta-date-created" datetime="2026-10-13T20:57:49.542Z" title="Created 2026-10-14 04:57:49">2026-10-14</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">Updated</span><time class="post-meta-date-updated" datetime="2026-10-14T04:40:49.549Z" title="Updated 2026-10-14 12:40:49">2026-10-14</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">Word Count:</span><span class="word-count">629</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">Post Views:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div><article class="container post-content" id="article-container"><div id="post-outdate-notice" data="{&quot;limitDay&quot;:720,&quot;messagePrev&quot;:&quot;It has been&quot;,&quot;messageNext&quot;:&quot;days since the last update, the content of the article may be outdated.&quot;,&quot;postUpdate&quot;:&quot;2026-10-14 12:40:49&quot;}" hidden></div><h1 id="实验源码与复现"><a href="#实验源码与复现" class="headerlink" title="实验源码与复现"></a>实验源码与复现</h1><p>这份目录保存预训练篇实际使用的脚本；训练在 Mac Studio 上运行，使用 MPS float32。它们是本次实验副本，未修改课程仓库的实现。</p>
+<h2 id="环境"><a href="#环境" class="headerlink" title="环境"></a>环境</h2><p>Python 3.12.14，依赖见 requirements.txt。脚本默认工作目录是自身所在目录，部分配置固定为本文的小模型。</p>
+<h2 id="数据"><a href="#数据" class="headerlink" title="数据"></a>数据</h2><ul>
+<li>TinyStories: roneneldan&#x2F;TinyStories，revision f54c09fd23315a6f9c86f9dc80f725de7d8f9c64。<br>将 TinyStoriesV2-GPT4-train.txt、TinyStoriesV2-GPT4-valid.txt 分别下载到 data&#x2F;train.txt、data&#x2F;valid.txt，然后运行 prepare.py。</li>
+<li>OpenWebText: stanford-cs336&#x2F;owt-sample，revision 488afadefc224407de5645a3c8c53b64ed923537。<br>prepare_owt.py 下载、训练 tokenizer、预编码。下载命令使用本机 127.0.0.1:7897 代理；其他环境应移除 –proxy 参数或使用自己的代理。</li>
+<li>两套 BPE 各自在训练集前 10,000 篇文档上训练，vocab&#x3D;10,000；原始 tokenizer 随文章资源保存，便于固定词表复查。</li>
+<li>数据文件和模型 checkpoint 体积较大，保留在执行机器，未混入文章资源。</li>
+</ul>
+<h2 id="执行"><a href="#执行" class="headerlink" title="执行"></a>执行</h2><p>先运行 run.py 生成基线，再运行 evaluate_final.py 得到完整验证结果。run.py 从零训练，不能覆盖已有基线目录。</p>
+<p>suite.py 读取已有基线，顺序执行学习率、消融、权重共享、batch 和 OWT。result.json 存在时跳过该项；experiment.py 可从对应 resume.pt 恢复。batch_retune.py 等待 SUITE_DONE.json 后补跑 batch 的学习率复验。不要同时启动两份队列。</p>
+<p>单轮示例：</p>
+<figure class="highlight sh"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.venv/bin/python experiment.py --name custom-run --lr .003 --tokens 40960000</span><br></pre></td></tr></table></figure>
+
+<p>运行结果在 runs&#x2F;<name>&#x2F; 下，包括 config.json、metrics.jsonl、result.json、samples.json 和 checkpoint。每组最终验证结果应以 result.json 为准。</p>
+<p>verify_training.py 运行课程提供的 AdamW、学习率、交叉熵、梯度裁剪和 checkpoint 断言；sgd_toy.py 运行文中的 SGD 小实验。</p>
+<h2 id="图与统计"><a href="#图与统计" class="headerlink" title="图与统计"></a>图与统计</h2><p>文章资源 experiments&#x2F; 保存全部轻量日志和结果，不含训练数据与 checkpoint。plot_experiments.py 从这些日志生成曲线；plot_loss.py 生成首轮基线曲线。曲线按累计 token 和训练循环耗时绘制，不把提前发散当成完成训练。</p>
+<p>完整验证将数据切为不重叠的 256-token 窗口并丢弃尾部不足一窗部分。抽样验证固定 20 个 batch，每个 32×256 token，seed&#x3D;2026。不同数据集使用独立词表，loss 不做跨数据集排名。</p>
+<p>24 GiB 是本次 MPS 训练进程的分配预算，用于给机器原有服务留空间；batch 探测不代表整机 128 GB 内存的物理极限。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>Author: </span><span class="post-copyright-info"><a href="https://fengye404.top">风业</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>Link: </span><span class="post-copyright-info"><a href="https://fengye404.top/2026/10/14/cs336-pretraining/experiment-code/README/">https://fengye404.top/2026/10/14/cs336-pretraining/experiment-code/README/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>Copyright Notice: </span><span class="post-copyright-info">All articles on this blog are licensed under <a target="_blank" rel="noopener" href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> unless otherwise stated.</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" data-sites="x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2026/10/14/cs336-pretraining/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——预训练篇"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">Previous</div><div class="info-item-2">手把手带工程同学从零实现一个完整的LLM（CS336）——预训练篇</div></div><div class="info-2"><div class="info-item-1">手把手带工程同学从零实现一个完整的LLM（CS336）——预训练篇前言上一篇我们实现了 Tokenizer 和 Transformer，从一段文本到每个位置的词表分数，整个前向计算已经串起来了。不过模型里的参数还是随机初始化的，直接拿来生成文本，出来的也基本是乱码。 这一篇继续把训练部分补上：准备输入和标签，计算 loss，用优化器更新参数，最后加载训练好的模型生成文本。对应的是 CS336 Assignment 1 剩下的内容。 这里做的是预训练：让模型在大量文本上学习预测下一个 token。训练数据本身就能提供答案，比如输入“今天的天气”，让模型预测后面的字，不需要逐条人工标注。训练完成后，我们得到的是一个能续写文本的基础模型；指令微调、偏好优化这些后训练内容，后面再写。 下面继续使用上一篇的 TransformerLM，在 Mac Studio 上完成 TinyStories 和 OpenWebText 的训练，再比较学习率、batch size 和模型结构对结果的影响。 1. 训练目标输入和标签先看一个最简单的例子。假设一段文本编码之后是： 123原始序列：[12, 35...</div></div></div></a><a class="pagination-related" href="/2026/10/11/qwen38-flash-next-m5max-benchmark/" title="128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">Next</div><div class="info-item-2">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</div></div><div class="info-2"><div class="info-item-1">前段时间 Qwen 发布了 Qwen3.8-27B、Qwen3.8-flash-next 两个小模型，在 AA 的排行榜单上，甚至超过了了半年前的各家旗舰模型（比如 Opus 4.6、Kimi 2.6、GLM-5.2）  难道本地小模型真王朝了？！不过很遗憾我手上只有一台 4080s 的显卡，12G 显存只能勉强跑一跑 Qwen3.8-27B 的量化版，而且这种稠密模型的推理速度实在是感人。正巧 9 月苹果最新的 Mac Studio 要发布了，我必须得下一单尝尝咸淡（对不起买不起更贵的 M5 Ultra 了😭）  昨天到货后，马上迫不及待跑了一下 Qwen3.8-Flash-Next。这次我测试的两个目标是：  **Qwen3.8-Flash-Next-REAP-288-MLX-4bit**：社区作者 sh0wie 提供的专家剪枝版本，每层保留 512 个专家中的 288 个，并使用 4-bit 量化。全套下载约 73.52 GB，主要优势是占用空间更小，下面简称 REAP。 **Qwen3.8-Flash-Next-MLX-Serve-mixed-4-8bit**：社区作者...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1129126684&amp;s=640" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/ loading='lazy'></div><div class="author-info-name">风业</div><div class="author-info-description">fengye's blog</div><div class="site-data"><a href="/archives/"><div class="headline">Articles</div><div class="length-num">39</div></a><a href="/tags/"><div class="headline">Tags</div><div class="length-num">15</div></a><a href="/categories/"><div class="headline">Categories</div><div class="length-num">0</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/fengye404"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>Contents</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%AE%9E%E9%AA%8C%E6%BA%90%E7%A0%81%E4%B8%8E%E5%A4%8D%E7%8E%B0"><span class="toc-number">1.</span> <span class="toc-text">实验源码与复现</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%8E%AF%E5%A2%83"><span class="toc-number">1.1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%95%B0%E6%8D%AE"><span class="toc-number">1.2.</span> <span class="toc-text">数据</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%89%A7%E8%A1%8C"><span class="toc-number">1.3.</span> <span class="toc-text">执行</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%BE%E4%B8%8E%E7%BB%9F%E8%AE%A1"><span class="toc-number">1.4.</span> <span class="toc-text">图与统计</span></a></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>Recent Posts</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/14/cs336-pretraining/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——预训练篇">手把手带工程同学从零实现一个完整的LLM（CS336）——预训练篇</a><time datetime="2026-10-14T04:00:00.000Z" title="Created 2026-10-14 12:00:00">2026-10-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/14/cs336-pretraining/experiment-code/README/" title="Untitled">Untitled</a><time datetime="2026-10-13T20:57:49.542Z" title="Created 2026-10-14 04:57:49">2026-10-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/11/qwen38-flash-next-m5max-benchmark/" title="128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告">128G 满血版 M5 Max Mac Studio 运行 Qwen3.8-Flash-Next 最佳实践报告</a><time datetime="2026-10-11T04:15:52.000Z" title="Created 2026-10-11 12:15:52">2026-10-11</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/09/20/%E6%89%8B%E6%8A%8A%E6%89%8B%E5%B8%A6%E5%B7%A5%E7%A8%8B%E5%90%8C%E5%AD%A6%E4%BB%8E%E9%9B%B6%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA%E5%AE%8C%E6%95%B4%E7%9A%84LLM%EF%BC%88CS336%EF%BC%89%E2%80%94%E2%80%94Transformer%E7%AF%87/" title="手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇">手把手带工程同学从零实现一个完整的LLM（CS336）——Transformer篇</a><time datetime="2026-09-19T17:45:00.000Z" title="Created 2026-09-20 01:45:00">2026-09-20</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/03/22/%E4%BB%8EPrompt-Engineering%E5%88%B0Harness-Engineering%EF%BC%9ATermPilot%E7%9A%84%E6%94%B9%E9%80%A0%E5%AE%9E%E8%B7%B5/" title="从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践">从 Prompt Engineering 到 Harness Engineering：TermPilot 的改造实践</a><time datetime="2026-03-21T20:20:16.000Z" title="Created 2026-03-22 04:20:16">2026-03-22</time></div></div></div></div></div></div></main><footer id="footer" style="background: transparent;"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2024 - 2026 By 风业</span><span class="framework-info"><span>Framework </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>Theme </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.4</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="Reading Mode"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="Toggle Between Light and Dark Mode"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="Toggle Between Single-column and Double-column"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="Settings"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="Table of Contents"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="Back to Top"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script src="https://cdn.jsdelivr.net/npm/pjax/pjax.min.js" defer="defer"></script><script>document.addEventListener('DOMContentLoaded', () => {
+  const pjaxSelectors = ["head > title","#config-diff","#body-wrap","#rightside-config-hide","#rightside-config-show",".js-pjax"]
+
+  window.pjax = new Pjax({
+    elements: 'a:not([target="_blank"])',
+    selectors: pjaxSelectors,
+    cacheBust: false,
+    analytics: false,
+    scrollRestoration: false
+  })
+
+  const triggerPjaxFn = (val) => {
+    if (!val) return
+    Object.values(val).forEach(fn => {
+      try {
+        fn()
+      } catch (err) {
+        console.debug('Pjax callback failed:', err)
+      }
+    })
+  }
+
+  document.addEventListener('pjax:send', () => {
+    // removeEventListener
+    btf.removeGlobalFnEvent('pjaxSendOnce')
+    btf.removeGlobalFnEvent('themeChange')
+
+    // reset readmode
+    const $bodyClassList = document.body.classList
+    if ($bodyClassList.contains('read-mode')) $bodyClassList.remove('read-mode')
+
+    triggerPjaxFn(window.globalFn.pjaxSend)
+  })
+
+  document.addEventListener('pjax:complete', () => {
+    btf.removeGlobalFnEvent('pjaxCompleteOnce')
+    document.querySelectorAll('script[data-pjax]').forEach(item => {
+      const newScript = document.createElement('script')
+      const content = item.text || item.textContent || item.innerHTML || ""
+      Array.from(item.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value))
+      newScript.appendChild(document.createTextNode(content))
+      item.parentNode.replaceChild(newScript, item)
+    })
+
+    triggerPjaxFn(window.globalFn.pjaxComplete)
+  })
+
+  document.addEventListener('pjax:error', e => {
+    if (e.request.status === 404) {
+      false
+        ? pjax.loadUrl('/404.html')
+        : window.location.href = e.request.responseURL
+    }
+  })
+})</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">Search</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  Loading Database</span></div><div class="local-search-input"><input placeholder="Search for Posts" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

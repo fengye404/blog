@@ -1,0 +1,1 @@
+{"name":"batch-32","status":"completed","reason":null,"steps":500,"tokens":4096000,"seconds":125.48524654200446,"val_loss":2.498597252368927,"parameters":22696448,"full_val_loss":null}

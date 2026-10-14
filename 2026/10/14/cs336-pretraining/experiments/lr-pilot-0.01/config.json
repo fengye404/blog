@@ -1,0 +1,1 @@
+{"name":"lr-pilot-0.01","lr":0.01,"batch":32,"tokens":8192000,"variant":"baseline","dataset":"tiny","probe":false,"steps":1000,"seed":42,"warmup_fraction":0.02,"context":256,"vocab":10000,"memory_budget_GiB":24}
