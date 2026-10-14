@@ -1,0 +1,16 @@
+{
+  "train": {
+    "documents": 2399397,
+    "tokens": 3093222999
+  },
+  "valid": {
+    "documents": 59059,
+    "tokens": 75330294
+  },
+  "revision": "488afadefc224407de5645a3c8c53b64ed923537",
+  "vocab_size": 10000,
+  "tokenizer_training_documents": 10000,
+  "dtype": "uint16",
+  "seconds": 1069.990797996521,
+  "tokenizer_sha256": "3eb8543eab1c3cca065a3b5e7b7c7a34e5b24033031acfe634fbf602c964d247"
+}

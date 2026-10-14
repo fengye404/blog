@@ -1,0 +1,11 @@
+{
+  "name": "ablation-no_norm-lower",
+  "status": "completed",
+  "reason": null,
+  "steps": 5000,
+  "tokens": 40960000,
+  "seconds": 928.2740268749985,
+  "val_loss": 1.8750468254089356,
+  "parameters": 22691840,
+  "full_val_loss": 1.888786693349008
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She had a big, red ball. One day, she found a big, red ball. She was very happy. She wanted to play with the ball.\nOne day, Lily saw a big, red ball. She wanted to play with it. She put the ball in the water and started to climb. She saw a big, red ball. She was very happy. She wanted to play with the ball.\nAs she walked, she saw a big, shiny rock. The bird was scared and wanted to help the bird. The bird was happy and thanked the bird. The bird was happy and thanked the bird. The bird was happy and thanked the bird.\n<|endoftext|>",
+    "new_tokens": 137
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She had a big pink toy named Sue. She loved to play with her toys. One day, she saw a little girl named Sue. She was very happy and asked her mom to help her.\n\"Can I get some?\" Her mom said. Her mom said, \"Yes, I can help you!\" said Sally. Her mom smiled and said, \"Don't worry, you must fix it together.\" Lucy was very happy and said, \"Of course, that! I found it again. Let's be a very good friend.\"\nSo, Amy and Tom played together. They always ate the toys and had lots of fun. They were very happy to play with the ball and had lots of fun.\n<|endoftext|>",
+    "new_tokens": 146
+  }
+]

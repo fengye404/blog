@@ -1,0 +1,11 @@
+{
+  "name": "batch-128",
+  "status": "completed",
+  "reason": null,
+  "steps": 125,
+  "tokens": 4096000,
+  "seconds": 127.41005349999614,
+  "val_loss": 3.029290997982025,
+  "parameters": 22696448,
+  "full_val_loss": null
+}

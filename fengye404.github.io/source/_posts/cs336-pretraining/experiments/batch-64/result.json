@@ -1,0 +1,11 @@
+{
+  "name": "batch-64",
+  "status": "completed",
+  "reason": null,
+  "steps": 250,
+  "tokens": 4096000,
+  "seconds": 127.11375949999638,
+  "val_loss": 2.658932161331177,
+  "parameters": 22696448,
+  "full_val_loss": null
+}

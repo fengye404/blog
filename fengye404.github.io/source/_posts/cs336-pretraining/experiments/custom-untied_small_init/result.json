@@ -1,0 +1,11 @@
+{
+  "name": "custom-untied_small_init",
+  "status": "completed",
+  "reason": null,
+  "steps": 5000,
+  "tokens": 40960000,
+  "seconds": 1002.8962134589965,
+  "val_loss": 1.6678065061569214,
+  "parameters": 22696448,
+  "full_val_loss": 1.675807150852445
+}

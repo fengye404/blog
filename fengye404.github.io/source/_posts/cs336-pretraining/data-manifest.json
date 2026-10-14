@@ -1,0 +1,17 @@
+{
+  "train": {
+    "documents": 2717700,
+    "tokens": 542033426
+  },
+  "valid": {
+    "documents": 27631,
+    "tokens": 5473838
+  },
+  "tokenizer_training_documents": 10000,
+  "vocab_size": 10000,
+  "dtype": "uint16",
+  "dataset": "roneneldan/TinyStories, TinyStoriesV2-GPT4",
+  "dataset_revision": "f54c09fd23315a6f9c86f9dc80f725de7d8f9c64",
+  "seconds": 181.75285410881042,
+  "tokenizer_sha256": "a4750a087f3aa8952ce80ebac3aec94167700fcadd9fb5f6c133b1ecafb38c1c"
+}

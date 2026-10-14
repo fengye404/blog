@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play with her toys and have fun. One day, she found a big, shiny rock in her room. She was very happy and wanted to show it to her mom.\nLily ran to her mom and said, \"Look, Mom! I found a shiny rock!\" Her mom smiled and said, \"That's a nice rock, Lily. Let's go to the park and play with it.\"\nAt the park, Lily and her mom played with the shiny rock. They had so much fun. But then, something unexpected happened. The rock started to move! It was not a rock at all, but a big, friendly dog!\nThe dog said, \"Hello, Lily! I am a magic dog. I can make your toy come to life!\" Lily and her mom were very surprised. They had never seen a talking dog before. They all became friends and played together every day.\n<|endoftext|>",
+    "new_tokens": 187
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play outside in the dirt. One day, she found a small mint plant in the dirt. She thought it was very pretty and wanted to show her mom.\nLily took the mint plant home and showed it to her mom. Her mom said, \"Wow, that's a big mint plant. I recommend you take care of it and take care of it.\" Lily smiled and put the mint plant in her garden.\nLater, Lily showed her mom the mint plant. Her mom smiled and said, \"Good job, Lily! I'm glad you're having fun with the mint plant.\" Lily felt happy and proud that she had found a beautiful mint plant.\n<|endoftext|>",
+    "new_tokens": 138
+  }
+]

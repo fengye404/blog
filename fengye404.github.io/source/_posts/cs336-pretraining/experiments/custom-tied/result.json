@@ -1,0 +1,11 @@
+{
+  "name": "custom-tied",
+  "status": "completed",
+  "reason": null,
+  "steps": 5000,
+  "tokens": 40960000,
+  "seconds": 1002.5668328329994,
+  "val_loss": 1.640765482187271,
+  "parameters": 17576448,
+  "full_val_loss": 1.650147101395414
+}

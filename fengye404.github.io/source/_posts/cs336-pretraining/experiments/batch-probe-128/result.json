@@ -1,0 +1,10 @@
+{
+  "name": "batch-probe-128",
+  "status": "completed",
+  "reason": null,
+  "steps": 3,
+  "tokens": 98304,
+  "seconds": 2.510624000002281,
+  "val_loss": null,
+  "parameters": 22696448
+}

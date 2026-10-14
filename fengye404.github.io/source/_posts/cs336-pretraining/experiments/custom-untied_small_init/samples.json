@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play with her toys and eat yummy food. One day, she found a big, red apple in her kitchen. She was so happy and wanted to eat it all.\nLily's mom saw her looking at the apple and said, \"Lily, you can eat the apple if you want.\" Lily was very happy and ate the apple. She ate and ate until she was full.\nAfter eating, Lily's mom said, \"Lily, you need to eat your apple now.\" Lily ate her apple and felt very full. She was very happy and full.\n<|endoftext|>",
+    "new_tokens": 118
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play outside in the dirt. One day, she found a small screw in her toy box. She picked it up and put it in her pocket.\nLily went to her mom and said, \"Mom, I found a screw! I found it in my house.\" Her mom smiled and said, \"Good job, Lily! Now we can play outside in the sun.\"\nThey played together all day, running and laughing. Lily's mom was very happy to see her. They had so much fun together. And from that day on, Lily and her toy stayed best friends.\n<|endoftext|>",
+    "new_tokens": 122
+  }
+]

@@ -1,0 +1,6 @@
+{"step": 1, "tokens": 32768, "seconds": 0.9212180829999852, "train_loss": 9.25944709777832, "val_loss": null, "lr": 0.0, "grad_norm": 1.1122357845306396}
+{"step": 1, "tokens": 32768, "seconds": 0.931266040999617, "train_loss": 9.25944709777832, "val_loss": null, "lr": 0.0, "grad_norm": 1.1122357845306396, "allocated_bytes": 461375488, "driver_bytes": 18745769984}
+{"step": 2, "tokens": 65536, "seconds": 1.714301499996509, "train_loss": 9.258066177368164, "val_loss": null, "lr": 4e-05, "grad_norm": 1.103329062461853}
+{"step": 2, "tokens": 65536, "seconds": 1.7244277909994707, "train_loss": 9.258066177368164, "val_loss": null, "lr": 4e-05, "grad_norm": 1.103329062461853, "allocated_bytes": 447788800, "driver_bytes": 18745769984}
+{"step": 3, "tokens": 98304, "seconds": 2.50886024999636, "train_loss": 9.204046249389648, "val_loss": null, "lr": 8e-05, "grad_norm": 1.087658405303955}
+{"step": 3, "tokens": 98304, "seconds": 2.5105559160001576, "train_loss": 9.204046249389648, "val_loss": null, "lr": 8e-05, "grad_norm": 1.087658405303955, "allocated_bytes": 460863232, "driver_bytes": 18745769984}

@@ -1,0 +1,10 @@
+{
+  "passed": [
+    "test_adamw",
+    "test_get_lr_cosine_schedule",
+    "test_cross_entropy",
+    "test_gradient_clipping",
+    "test_checkpointing"
+  ],
+  "source": "assignment1/tests; original assertions, adapter bindings to training.py"
+}

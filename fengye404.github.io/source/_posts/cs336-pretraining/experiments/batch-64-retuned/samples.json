@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play with her toys. One day, she found a big, red ball. The ball was very pretty.\nLily's friend, a little girl named Lily. She saw the toy and wanted to play with it. She asked her mom, \"Can I play with the ball?\" Lily said, \"Yes, but be careful. I will help you.\"\nLily and her friends played together all day. They had lots of fun. They had a fun day at the park.\n<|endoftext|>",
+    "new_tokens": 102
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play outside in the garden. One day, she found a big table in the yard. It was so pretty and dark.\nLily and Lily played in the park together. They had an idea. Lily asked Lily, \"Why are you sad?\"\nLily was surprised. She looked at the park and then she said, \"Yes, I know that are not in a special game. We will make you a cake.\"\nLily and Mia ran to her. They looked under the kitchen. They said, \"Thank you, Lily! You are very kind. And you are sorry, Lily. You are the best of us.\" They were happy and happy.\n<|endoftext|>",
+    "new_tokens": 138
+  }
+]

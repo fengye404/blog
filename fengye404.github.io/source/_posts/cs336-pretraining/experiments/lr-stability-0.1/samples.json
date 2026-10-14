@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. Tim was very happy. Tim loved to play with his friends.\n<|endoftext|>",
+    "new_tokens": 15
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. Lily. He would see what the water.\n<|endoftext|>",
+    "new_tokens": 11
+  }
+]

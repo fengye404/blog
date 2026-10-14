@@ -1,0 +1,11 @@
+{
+  "name": "ablation-nope",
+  "status": "completed",
+  "reason": null,
+  "steps": 5000,
+  "tokens": 40960000,
+  "seconds": 926.7848870419984,
+  "val_loss": 1.8218575716018677,
+  "parameters": 22696448,
+  "full_val_loss": 1.835890143047647
+}

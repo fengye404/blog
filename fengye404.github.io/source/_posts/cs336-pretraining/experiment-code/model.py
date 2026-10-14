@@ -1,0 +1,554 @@
+import torch
+import math
+
+# Linear 实际上就是内部维护了一个可训练的权重 tensor（cs336 作业中不包含 bias 偏置）
+# 输入 tensor 经过权重 tensor 向量计算后，输出一个新的 tensor
+# 输入和输出的 tensor 的 shape 可以不一样，也就是构造时的 in_features、out_features
+# 因此可训练的权重 tensor 的 shape 就是 (out_features, in_features)
+# 为什么不是 (in_features, out_features)? 因为 linear forward 的公式是 y=x@W.T，而不是 y=W@x，因为 pytorch 中向量是 row-vector 的
+class Linear(torch.nn.Module):
+    def __init__(self, in_features, out_features, device=None, dtype=None):
+        super().__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        
+        # 用 troch empty 申请出一个 tensor，devie、dtype 直接透传
+        # in_features 输入维度
+        # out_features 输出维度
+        self.W = torch.nn.Parameter(
+            torch.empty(
+                (out_features, in_features),
+                device = device,
+                dtype = dtype
+            )
+        )
+        
+        # 用 assignment1 里面给出的初始化公式进行初始化
+        # W ~ 𝒩(μ = 0, σ² = 2 / (d_in + d_out))，截断到 [-3σ, 3σ]
+        
+        # 先计算标准差
+        std = (2 / (in_features+out_features)) ** 0.5
+        torch.nn.init.trunc_normal_(
+            self.W,
+            mean = 0,
+            std = std,
+            a = -3 * std,
+            b = 3 * std
+        )
+    
+    # linear 实际上就是一个简单的线性变换，在 pytorch 中表达为 y=x@W.T，「.T」 表示转置
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x @ self.W.T
+
+
+# embedding 实际上就是把一个 tensor 中的每个元素都替换为 vector
+# 因此 embedding 中需要维护一个可训练的映射表
+# forward 就是执行映射
+class Embedding(torch.nn.Module):
+    def __init__(self, vocab_size: int, d_model: int, device=None, dtype=None):
+        super().__init__()
+        
+        # vocab_size 词表大小
+        # d_model 每个 token 的维度
+        self.embedding = torch.nn.Parameter(
+            torch.empty(
+                (vocab_size, d_model),
+                device = device,
+                dtype = dtype
+            )
+        )
+        
+        # 用 assignment1 里面给出的初始化公式进行初始化
+        # W ~ 𝒩(μ = 0, σ² = 1，截断到 [-3, 3]
+        torch.nn.init.trunc_normal_(
+            self.embedding,
+            mean = 0,
+            std = 1,
+            a = -3,
+            b = 3
+        )
+        
+    # embedding 实际上就是一个查表操作
+    # forward 的输入 tensor shape 为 (batch, seq_len)
+    # 里面执行的逻辑就是对每个 batch 的每个 seq 元素，执行一下查表操作
+    
+    # 怎么理解这个 []？
+    # 实际上 python 中 A[B] 等价于 A.__getitem__(B)
+    def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
+        return self.embedding[token_ids]
+
+# RMSNorm 公式：output = (x / sqrt(mean(x²) + eps)) × weight
+class RMSNorm(torch.nn.Module):
+    def __init__(self, d_model: int, eps: float = 1e-5, device=None, dtype=None):
+        super().__init__()
+        
+        # d_model 模型 token 维度；weight 用于最后做缩放，维度要和 d_model 一致
+        # eps 用于防止分母为 0
+        
+        self.weight = torch.nn.Parameter(
+            torch.ones(
+                d_model,
+                device = device,
+                dtype = dtype
+            )
+        )
+        self.eps = eps
+        pass
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # 按照 pdf 的要求，入参 x 需要先转到 32 位
+        in_dtype = x.dtype
+        x_float32 = x.to(torch.float32)
+        
+        # 应用公式
+        # 注意 mean 只需要对最后维度求平均，keepdim 表示需要保留维度，这里 mean 后的 shape 就是 (batch, seq_len, 1)
+        rms = torch.sqrt(
+            torch.mean(
+                torch.square(x_float32), 
+                dim = -1,
+                keepdim = True
+            ) + self.eps
+        )
+        # 注意这里是 * weight 而不是 @，因为是逐元素相乘缩放
+        # 这里计算需要注意一下 shape
+        # x_floagt32(batch, seq_len, d_model)，rms(batch, seq_len, 1)
+        # x_floagt32/rms 这里会用到 pytorch 里面的广播机制
+        # 广播：两个 shape 不完全一样的 tensor 做逐元素运算时，PyTorch 会在尺寸为 1 的维度上，自动“重复使用”那个值，让 shape 对齐。
+        result = (x_float32 / rms) * self.weight
+        
+        # 返回前转回原来的 dtype
+        return result.to(in_dtype) 
+    
+    
+# silu 公式：SiLU(x) = x × sigmoid(x)
+# sigmoid(x) = 1 / (1 + e⁻ˣ)
+def silu(in_features: torch.Tensor):
+    return in_features * torch.sigmoid(in_features)
+
+# SwiGLU 相比于通常的 FNN，实际上就是加了一层 gate 门控分支
+# FNN：x -> Linear W1（通常维度扩大 4 倍） -> ReLU -> Linear W2（缩小四倍） -> 输出
+#
+# SwiGLU：
+# x (d_model) -> Linear W1 (d_model -> d_ff) -> SiLU ─┐
+#                                                   × -> Linear W2 (d_ff → d_model) → 输出
+# x (d_model) -> Linear W3 (d_model -> d_ff)  ────────┘
+# 公式：SwiGLU(𝑥, 𝑊1, 𝑊2, 𝑊3) = 𝑊2(SiLU(𝑊1𝑥) ⊙ 𝑊3𝑥)   ⊙表示逐元素相乘
+class SwiGLU(torch.nn.Module):
+    def __init__(self, d_model: int, d_ff: int, device=None, dtype=None):
+        # d_ff：隐藏层的维度
+        
+        super().__init__()
+        self.d_model = d_model
+        self.d_ff = d_ff
+        
+        # w1、w3 负责升维
+        self.w1 = Linear(d_model,d_ff,device,dtype)
+        self.w3 = Linear(d_model,d_ff,device,dtype)
+        
+        # w2 负责降维
+        self.w2 = Linear(d_ff,d_model,device,dtype)
+        
+    def forward(self, x: torch.Tensor):
+        a = silu(self.w1(x)) 
+        b = self.w3(x)
+        # 注意这里是是逐元素相乘
+        return self.w2(a * b)
+    
+
+# 传统 Transformer 的绝对位置编码：
+#
+# token_ids = [101, 205, 307]            # token 在词表中的 ID
+#              │    │    │
+#              │    │    └── token_embedding[307] = e₂
+#              │    └─────── token_embedding[205] = e₁
+#              └──────────── token_embedding[101] = e₀
+#
+# token 向量： [e₀,      e₁,      e₂]
+# 位置下标：    [ 0,       1,       2]
+#                │        │        │
+#                │        │        └── position_embedding[2] = p₂
+#                │        └─────────── position_embedding[1] = p₁
+#                └──────────────────── position_embedding[0] = p₀
+#
+# 位置向量： [p₀,      p₁,      p₂]
+#                │        │        │
+#                └────────逐元素相加────────┘
+#                             ↓
+# Transformer 输入：
+# x = [e₀ + p₀,  e₁ + p₁,  e₂ + p₂]
+#
+# ==================== 分界线 ==========================
+#
+# 而 RoPE 作用在在 Attention 的 q、k 向量上
+# 它会对每个 token 的 q、k 向量进行旋转，通过旋转来把位置信息编码到 q、k 中
+# 例如对于某个 token X[n]，RoPE 会对它的 q、k 向量进行如下操作：
+# 1、将 q、k 向量分为两两一组（q、k 向量的 shape 等于每个 token 的维度，现在的 transformer 里面 token 维度都是偶数）
+#    例如 q 为 [q0, q1, q2, q3, q4, q5]，
+#    会被分为 [(q0,q1), (q2,q3), (q4,q5)]
+#
+# 2、每一对维度都看作一个二维向量，并分别旋转
+#    每一对的旋转角度 = token 的位置 n × 该维度对自己的旋转频率
+#
+#    例如：
+#    (q0,q1) 按 n × f1 旋转
+#    (q2,q3) 按 n × f2 旋转
+#    (q4,q5) 按 n × f3 旋转
+#   
+#    每一对维度旋转频率
+#    f_k = 1 / theta^((2k - 2) / d_k)
+#    第 k 对维度、位于位置 n 的 token 的旋转角度为：
+#    angle[n, k] = n × f_k
+#                = n / theta^((2k - 2) / d_k)
+#
+#    不同维度对的频率 f1、f2、f3 不同，
+#    因此同一个 q/k 向量中的不同维度对，旋转角度通常也不同
+#    这是为了让一个 token 中不同的维度可以以不同的方式去记录位置信息
+#
+# 3、q、k 的对应维度对，会按相同的位置 n 和相同频率旋转
+#    得到旋转后的 q_rotated、k_rotated；它们的 shape 不变
+#
+#    q: [q0, q1, q2, q3, q4, q5]
+#          ↓    ↓    ↓
+#    q_rotated: [q0', q1', q2', q3', q4', q5']
+#
+# 4、之后 Attention 使用旋转后的 q、k 计算点积
+#    q_rotated @ k_rotated.T
+#
+#    因此不同 token 的 q、k 点积不仅和内容有关，
+#    还会受到两者相对位置距离的影响
+# 
+# 
+# 对于单个二维向量 (a, b)，假设旋转角度为 alpha，
+# 数学上的二维旋转矩阵为：
+#
+# R(alpha) = [[cos(alpha), -sin(alpha)],
+#             [sin(alpha),  cos(alpha)]]
+#
+# 旋转结果为：
+# [a', b'] = [a × cos(alpha) - b × sin(alpha),
+#             a × sin(alpha) + b × cos(alpha)]
+#
+# 对于整个 q/k 向量，数学上可以把所有二维旋转矩阵沿对角线拼起来，
+# 形成一个 d_k × d_k 的分块对角矩阵：
+#
+# R = [[R1,  0,  0],
+#      [ 0, R2,  0],
+#      [ 0,  0, R3]]
+#
+# 但是代码中一般不直接构造这个 d_k × d_k 的旋转矩阵：
+# 1、矩阵中绝大多数位置都是 0，存储浪费
+# 2、矩阵乘法会做很多和 0 相乘的无用计算
+#
+# 工程上使用与旋转矩阵完全等价的逐元素计算：
+# rotated_q = q ⊙ cos_value + rotate_half(q) ⊙ sin_value
+#
+# 其中 ⊙ 表示逐元素相乘；
+# cos_value / sin_value 为每对维度预先计算好的 cos / sin 值，
+# 同一对维度会重复使用相同的 cos / sin。
+#
+# 例如：
+# q = [q0, q1, q2, q3, q4, q5]
+#
+# rotate_half(q) = [-q1, q0, -q3, q2, -q5, q4]
+#
+# cos_value = [cos(n×f1), cos(n×f1),
+#              cos(n×f2), cos(n×f2),
+#              cos(n×f3), cos(n×f3)]
+#
+# sin_value = [sin(n×f1), sin(n×f1),
+#              sin(n×f2), sin(n×f2),
+#              sin(n×f3), sin(n×f3)]
+#
+# 最终得到的结果，和用完整分块对角矩阵 R 乘 q 完全相同，
+# 但只需要进行逐元素运算，更适合 GPU 并行计算。
+class RotaryPositionalEmbedding(torch.nn.Module):
+    def __init__(self, theta: float, d_k: int, max_seq_len: int, device=None):
+        # theta：RoPE 的频率基数
+        # d_k：q、k 向量维度
+        # max_seq_len：最大 token 长度
+        super().__init__()
+        self.d_k = d_k
+        
+        # 先计算每个位置需要旋转的角度
+        # 公式：f_k = 1 / theta^((2k - 2) / d_k)
+        # arange(0, d_k, 2) 产生 [0, 2, 4, ..., d_k-2]，对应公式中的2k-2(k从1开始)
+        # 注意这里 f_k 的 shape 是 (d_k / 2,)
+        f_k = 1 / (theta ** (torch.arange(0, d_k, 2, device=device).float() / d_k))
+        # 这里要用外积，外积的结果是前行后列，angle 是一个矩阵
+        # angle[n, k] = n × f_k = n / theta^((2k - 2) / d_k)
+        # angle 的shape：(max_seq_len, d_k / 2)
+        angle = torch.outer(torch.arange(max_seq_len, device=device).float(), f_k)
+        
+        # cos_table、sin_table shape 都是 (max_seq_len, d_k / 2)
+        self.register_buffer("cos_table", angle.cos())
+        self.register_buffer("sin_table", angle.sin())
+    
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor) -> torch.Tensor:
+        # x：shape 为 (..., seq_len, d_k) 的 q 或 k 向量
+        # token_positions：shape 为 (..., seq_len) 的整数位置下标；每个位置对应 x 中一个 q/k 向量所在的 token 位置。
+        
+        # 这里 cos 和 sin 的 shape 都是 token_positions.shape + (d_k // 2,)，得用 repeat_interleave 复制一下元素
+        cos_value = self.cos_table[token_positions].repeat_interleave(2, dim=-1).to(x.dtype)
+        sin_value = self.sin_table[token_positions].repeat_interleave(2, dim=-1).to(x.dtype)
+        
+        # 公式：rotated_q = q ⊙ cos_value + rotate_half(q) ⊙ sin_value
+        # rotate_half：[x0, x1, x2, x3, ...] → [-x1, x0, -x3, x2, ...]
+        
+        """
+        最后一维两两拆分，例如：
+        原来 (3, 6)：
+        [
+            [ 1,  2,  3,  4,  5,  6],
+            [ 7,  8,  9, 10, 11, 12],
+            [13, 14, 15, 16, 17, 18],
+        ]
+
+        现在 (3, 3, 2)：
+        [
+            [ [1, 2],  [3, 4],  [5, 6] ],      ← 第 0 个 token，3 组，每组 2 个
+            [ [7, 8],  [9,10],  [11,12] ],     ← 第 1 个 token
+            [ [13,14], [15,16], [17,18] ],     ← 第 2 个 token
+        ]
+        """
+        x_unflatten = x.unflatten(-1,(-1,2))
+        
+        """
+        按照奇偶拆分开
+        even = 每组的第 0 个元素：
+        [
+            [ 1,  3,  5],
+            [ 7,  9, 11],
+            [13, 15, 17],
+        ]
+        odd = 每组的第 1 个元素：
+        [
+            [ 2,  4,  6],
+            [ 8, 10, 12],
+            [14, 16, 18],
+        ]
+        """
+        even, odd = x_unflatten.unbind(-1)
+        
+        """
+        先奇偶互换，然后压缩最后两维
+        stack 后的结果：
+        [
+            [ [-2,  1], [-4,  3], [ -6,  5] ],     ← 第 0 个 token
+            [ [-8,  7], [-10, 9], [-12, 11] ],     ← 第 1 个 token
+            [ [-14,13], [-16,15], [-18, 17] ],     ← 第 2 个 token
+        ]
+        flatten 后：
+        [
+            [ -2,  1,  -4,   3,  -6,   5],
+            [ -8,  7, -10,   9, -12,  11],
+            [-14, 13, -16,  15, -18,  17],
+        ]
+        
+        """
+        x_rotate_half = torch.stack((-odd, even), dim = -1).flatten(-2)
+        
+        rotated_x = x * cos_value + x_rotate_half * sin_value
+        
+        return rotated_x
+    
+# softmax 的作用就是将分数转为概率，入参 x 是分数的 tensor，dim 表示对哪个维度进行 softmax
+# softmax(v)[i] = e^(v[i]) / (e^(v[0]) + e^(v[1]) + ... + e^(v[n - 1]))
+def softmax(x: torch.Tensor, dim: int):
+    # 因为 exp 是指数函数，如果 x 过大可能会导致溢出，而 softmax 实际上只关心每个 x 的差值，不关心具体的绝对值，所以先全都减掉 x 的最大值
+    x = x - x.max(dim = dim, keepdim = True).values
+    exp_x = torch.exp(x)
+    return exp_x / exp_x.sum(dim = dim,keepdim = True)
+
+# Attention(Q, K, V) = softmax(QK^T / √d_k) V
+def scaled_dot_product_attention(
+    Q: torch.Tensor,
+    K: torch.Tensor,
+    V: torch.Tensor,
+    mask: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """
+    参数：
+        Q: [..., n, d_k]   （n 为 Query 序列长度）
+        K: [..., m, d_k]   （m 为 Key 序列长度）
+        V: [..., m, d_v]
+        mask: [n, m] 布尔矩阵，True 为保留，False 为屏蔽
+
+    返回：
+        [..., n, d_v] 与输入 batch 维一致的张量
+    """
+    # 先获取 K 向量维度
+    d_k = K.size(-1)
+    
+    # 计算 Q K 向量的分数，并除以 √d_k 进行缩放
+    socres = (Q @ K.mT) / math.sqrt(d_k)
+    
+    """
+    Masked Scores = [[10, -inf, -inf],
+                     [ 5,  10, -inf],
+                     [ 2,   8,  10]]
+
+        => softmax => [[1.0, 0.0, 0.0],
+                       [0.3, 0.7, 0.0],
+                       [0.1, 0.4, 0.5]]
+    """
+    if mask is not None:
+        # mask 为 flase的地方设为负无穷
+        socres = socres.masked_fill(mask == False, float('-inf'))
+        
+    socres = softmax(socres, dim = -1)
+    
+    return socres @ V
+
+
+class MultiheadSelfAttention(torch.nn.Module):
+    def __init__(self, d_model: int, num_heads: int, theta=None, max_seq_len=None, device=None, dtype=None):
+        super().__init__()
+        
+        # 要用 head 数量均分 d_model，所以需要校验能否整除
+        assert d_model % num_heads == 0
+        
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.head_dim = d_model // num_heads
+        
+        # 先定义获取 QKV 向量的 Linear
+        self.W_Q = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.W_K = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.W_V = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        
+        # 输出经过 QKV 运算后需要再过一次 Linear
+        self.out_proj = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        
+        # 如果传入了 theta 和 max_seq_len，则处理 rope 的逻辑
+        if theta is not None and max_seq_len is not None:
+            self.rope = RotaryPositionalEmbedding(theta=theta, d_k=self.head_dim, max_seq_len=max_seq_len, device=device)
+        else:
+            self.rope = None
+        
+    def forward(self, x: torch.Tensor, token_positions=None):
+        # 先计算出完整的 QKV，再按照 head 拆分
+        q = self.W_Q(x)
+        k = self.W_K(x)
+        v = self.W_V(x)
+        
+        # 拆分后的多头 QKV 的 shape：(batch_size, num_heads, seq_len, head_dim)
+        # 这里 view 拆分需要先拆 qkv 的最后维度，所以前两维 shape 要展示保持 batch_size, seq_len，通过 transpose 处理成最终的 shape
+        batch_size, seq_len, d_model = x.shape
+        q = q.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        
+        # 如果 rope 不为 null 就对 q、k 进行 rope 计算
+        if self.rope is not None:
+            # token_positions shape：(batch_size, seq_len)
+            if token_positions is None:
+                token_positions = torch.arange(seq_len, device=x.device).expand(batch_size, seq_len)
+            # 每条文本的位置沿 head 轴广播；一维位置可由所有文本共用。
+            if token_positions.ndim == 2:
+                token_positions = token_positions.unsqueeze(1)
+            q=self.rope(q, token_positions)
+            k=self.rope(k, token_positions)
+        
+        # 这里需要一个下三角矩阵
+        """
+        True  False False False
+        True  True  False False
+        True  True  True  False
+        True  True  True  True
+        """
+        mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device, dtype=torch.bool))
+        
+        # 计算注意力
+        out = scaled_dot_product_attention(Q=q,K=k,V=v,mask=mask)
+        
+        # 把 heads 维度拼回 d_model，恢复 (batch_size, seq_len, d_model)。
+        out = out.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        return self.out_proj(out)
+
+
+# transformer block 公式：𝑦 = 𝑥 + MultiHeadSelfAttention(RMSNorm(𝑥)). 
+# 一个 transformer block 可以分为两个子层，一个用于多头注意力（简写为 MHA），一个用于SwiGLU的 FNN（简写 FF）
+# 在每个子层中，会先用 RMSNorm 进行归一化，再进行 MHA/FF，再进行残差连接
+class TransformerBlock(torch.nn.Module):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, theta=None, max_seq_len=None, device=None, dtype=None):
+        super().__init__()
+        
+        # 初始化 MHA
+        self.attention = MultiheadSelfAttention(
+            d_model=d_model, 
+            num_heads=num_heads, 
+            theta=theta, 
+            max_seq_len=max_seq_len,
+            device=device,
+            dtype=dtype
+        )
+        
+        # 初始化 FF
+        self.ffn = SwiGLU(d_model=d_model, d_ff=d_ff, device=device, dtype=dtype)
+        
+        # 初始化两个 RMSNorm，分别用于 MHA、FF
+        self.norm1 = RMSNorm(d_model=d_model, device=device, dtype=dtype)
+        self.norm2 = RMSNorm(d_model=d_model, device=device, dtype=dtype)
+    
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor = None):
+        # 先进行 MHA 操作
+        x = x + self.attention(x=self.norm1(x), token_positions=token_positions)
+        # 再进行 FF 操作
+        x = x + self.ffn(x=self.norm2(x))
+        return x
+        
+        
+# 完整的 transformer lm 的结构可以看原论文中的图，或者看 cs336 作业中的 Figure 1，图画的很清晰，就不多讲了
+class TransformerLM(torch.nn.Module):
+    def __init__(self, vocab_size: int, nums_layer: int, d_model: int, num_heads: int, d_ff: int, 
+                 theta=None, max_seq_len=None, device=None, dtype=None):
+        
+        super().__init__()
+        
+        self.token_embedding = Embedding(vocab_size=vocab_size, d_model=d_model, device=device, dtype=dtype)
+        self.layers = torch.nn.ModuleList([
+            TransformerBlock(
+                d_model=d_model,
+                num_heads=num_heads,
+                d_ff=d_ff,
+                theta=theta,
+                max_seq_len=max_seq_len,
+                device=device,
+                dtype=dtype
+            )
+            for _ in range(nums_layer)
+        ])
+        
+        self.norm = RMSNorm(d_model=d_model,device=device,dtype=dtype)
+        
+        # 注意最后是把向量映射回词表
+        self.linear = Linear(in_features=d_model, out_features=vocab_size, device=device, dtype=dtype)
+        
+    def forward(self, token_ids: torch.Tensor):
+        batch_size, seq_len = token_ids.shape
+        
+        # 计算后 x.shape: (batch, size, d_model)
+        x = self.token_embedding(token_ids)
+        
+        # 需要构建一个 token positions，传递到 transformer block 里面给 rope 使用
+        # 比如
+        # batch_size = 2
+        # seq_len = 4
+        # [
+        #  [0, 1, 2, 3],
+        #  [0, 1, 2, 3],
+        # ]
+        token_positions = torch.arange(seq_len, device=token_ids.device).unsqueeze(0).expand(batch_size, seq_len)
+        
+        # 计算后 x.shape: (batch, size, d_model)
+        for layer in self.layers:
+            x = layer(x, token_positions)
+        
+        # 计算后 x.shape: (batch, size, d_model)
+        x = self.norm(x)
+        
+        # 这里要把向量通过 lm header 计算为词表分数
+        # 计算后 x.shape: (batch, size, vocab_size)
+        x = self.linear(x)
+        
+        return x
+        

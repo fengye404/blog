@@ -1,0 +1,11 @@
+{
+  "name": "lr-pilot-0.01",
+  "status": "completed",
+  "reason": null,
+  "steps": 1000,
+  "tokens": 8192000,
+  "seconds": 254.55207737499586,
+  "val_loss": 2.8844789624214173,
+  "parameters": 22696448,
+  "full_val_loss": null
+}

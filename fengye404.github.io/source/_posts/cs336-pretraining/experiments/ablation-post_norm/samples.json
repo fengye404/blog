@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play with her toys and have fun. One day, she found a big, red ball in her room. She was very happy and wanted to play with it.\nLily took the ball outside and started to play with it. She threw it high in the sky and it went very high. But then, something unexpected happened. The ball started to move! It went up, up, up into the sky.\nLily was scared, but she kept playing with the ball. She knew she had to be careful and not to touch the ball. She picked up the ball and threw it high in the sky. The ball went up, up, up, and then it went back down. Lily was so happy to have her ball back. She played with the ball all day long, and she knew she would always remember the fun day she had with her new friend.\n<|endoftext|>",
+    "new_tokens": 180
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play outside in the snow. One day, she found a big, dry tree with lots of shade. Lily was very happy.\nLily wanted to make a snowman in the snow. She found a big ball and put it in the snowman. But when she tried to catch the ball, it did not roll away. Lily felt sad.\nA big wind came and blew the ball out of the snowman. Lily's mom saw the snowman and said, \"Don't worry, Lily. I will help you get the ball.\" She got the warm snow and brought the ball back to the snowman.\nLily's mom was very happy. She said, \"Thank you, Lily! You are a good friend.\" Lily learned that she did not need to be a brave girl. From that day on, she only used the cold snow.\n<|endoftext|>",
+    "new_tokens": 173
+  }
+]

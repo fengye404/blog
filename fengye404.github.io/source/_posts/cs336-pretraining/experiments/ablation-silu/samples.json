@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play outside in the sun. One day, she saw a big, red ball in the sky. She wanted to play with it.\nLily ran to the ball and said, \"Hello, ball! Can I play with you?\" The ball did not talk back, but Lily said, \"Yes, you can play with me.\" So, Lily and the ball played together all day. They had lots of fun.\nBut then, something unexpected happened. The ball started to move! It was not a ball at all. It was a big, friendly bear! The bear said, \"Hello, I am a magic bear. I can make your wishes come true.\" Lily was very surprised. She wished for a new friend to play with. The magic bear made her wish come true, and they played together all day.\n<|endoftext|>",
+    "new_tokens": 171
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play with her toys. One day, she found a hidden box in her room. She did not know what was inside.\nLily opened the box and found a lot of toys. She played with the toys and had lots of fun. But, her mom came in and said, \"Lily, you should not play with the toys that are not yours. You should not play with them.\"\nLily felt bad for being selfish. She didn't want to give the toys to her mom. So, she went to her mom and asked, \"Mom, can I play with the toys?\" Her mom smiled and said, \"Of course, Lily. We can play together.\"\nTogether, Lily and her mom played with the toys. They had a lot of fun. Lily learned that it was good to ask for help when she needed it. The moral of the story is to always ask for help when you need it.\n<|endoftext|>",
+    "new_tokens": 191
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play outside in the sun. One day, she saw a big, red ball in the sky. Lily wanted to play with the ball, so she ran to the ball and tried to catch it.\nLily ran and ran, but she could not catch the ball. She felt sad and sat down. Her mom saw her and said, \"Don't worry, Lily. I will help you.\" She went to the ball and tried to catch it. But the ball was too high for her to reach.\nLily had an idea. She found a long stick and used it to help the ball get the ball. She was so happy! She played with the ball all day long. The ball was not so heavy anymore. Lily learned that it is good to ask for help when you need it.\n<|endoftext|>",
+    "new_tokens": 166
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She loved to play with her toys. One day, she found a magic toy in her room. It was a pretty doll with a funny texture. Lily was very happy.\nLily wanted to show her mom the magic doll. She put it on a table in her room. Lily started to feel dizzy. She did not want to stop playing with her toys. Her mom saw her and said, \"Lily, you need to take a nap. It will make you feel better.\"\nLily did not want to nap. She wanted to play with her toys, but she did not want to fall. She kept playing with her toys. When she woke up, she remembered the magic toy she had and was not dizzy anymore. She was happy she could play with her toys again.\n<|endoftext|>",
+    "new_tokens": 159
+  }
+]

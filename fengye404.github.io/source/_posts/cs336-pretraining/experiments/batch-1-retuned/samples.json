@@ -1,0 +1,18 @@
+[
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She had a big, red ball. She loved to play with her ball. One day, she saw a big, red ball. It was a ball. Lily wanted to play with the ball, but she was too small.\nLily tried to jump, but she could not. She tried to jump, but she could not. She was sad. She did not know what to do. She thought she was very sad.\nThen, Lily had an idea. She said, \"Let's play a game. We can make a new friend.\" The game was a fun game. Lily and her friends played with the ball all day. They were very happy.\n<|endoftext|>",
+    "new_tokens": 136
+  },
+  {
+    "prompt": "Once upon a time, there was a little girl named Lily.",
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "seed": 42,
+    "text": "Once upon a time, there was a little girl named Lily. She had a big cup of red and long daddy. Lily loved to play outside with her friends, the little girl.\nOne day, Lily saw a big box on the floor. It was a toy and had a small, red ball. Lily was very excited to play with the ball. She ran to the house and played with her ball all day.\nLily was very happy and went back to the park. She saw the big, red ball and wanted to play with it. But the ball did not listen. It was too big and had a small red ball. Lily was sad and hurt. She did not know that the big red ball could play with her ball.\nThen, something unexpected happened. The red ball started to move again. The ball with the big red ball had move! It was so fun! The big red ball and the small ball became best friends. They played together every day, and Lily was never seen again.\n<|endoftext|>",
+    "new_tokens": 194
+  }
+]

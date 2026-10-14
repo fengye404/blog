@@ -1,0 +1,11 @@
+{
+  "name": "ablation-silu",
+  "status": "completed",
+  "reason": null,
+  "steps": 5000,
+  "tokens": 40960000,
+  "seconds": 998.836335208005,
+  "val_loss": 1.6399191319942474,
+  "parameters": 22827520,
+  "full_val_loss": 1.6493953033667064
+}
